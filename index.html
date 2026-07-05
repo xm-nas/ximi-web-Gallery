@@ -1,0 +1,512 @@
+
+<!-- 
+		发布地址：https://www.ximi.me/post-6044.html
+		版本：v1.01 
+        作者：希米
+        说明：本地图库，支持目录树浏览，原生体验,Telegraph风格，macOS化UI，支持移动端浏览。
+		更新时间：2036-07-05
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ximi Gallery Pro</title>
+
+<script src="setting.js"></script>
+
+<style>
+/* ================== Base & Typography ================== */
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: #fff;
+    color: #212121;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 18px;
+    line-height: 1.58;
+    -webkit-font-smoothing: antialiased;
+}
+
+header { margin-bottom: 35px; }
+
+/* ================== Floating Toggle Button ================== */
+.toggle-btn {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+    color: #333;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggle-btn:hover {
+    background: #f8f9fa;
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+
+/* ================== Sidebar & Overlay ================== */
+.sidebar-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.2);
+    backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+    z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.show { opacity: 1; pointer-events: auto; }
+
+.sidebar {
+    width: 250px; /* Mac 侧栏通常偏窄 */
+    background-color: rgba(235, 235, 239, 0.85); /* macOS 侧边栏经典底色 */
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border-right: 1px solid rgba(0,0,0,0.06);
+    display: flex; flex-direction: column; overflow-y: auto;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000; flex-shrink: 0;
+}
+
+.sidebar-header { padding: 20px 16px 12px 16px; }
+
+/* 重新设计的配置按钮：Mac 辅助按钮风格 */
+.btn-update {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; padding: 7px;
+    background: #ffffff; color: #1d1d1f;
+    border: 1px solid rgba(0,0,0,0.1); border-radius: 6px;
+    cursor: pointer; font-size: 13px; font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.btn-update:hover { 
+    background: #fbfbfb; 
+    border-color: rgba(0,0,0,0.15); 
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06); 
+}
+.btn-update input { display: none; }
+
+/* 目录树 macOS 化：更小的字号，紧凑的行高 */
+.tree-menu { 
+    padding: 0 0 80px 0; margin: 0; list-style: none; 
+    font-size: 13px; 
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; 
+}
+.tree-menu ul { list-style: none; padding-left: 20px; margin: 0; display: none; }
+.tree-menu li { margin: 2px 0; }
+
+.tree-item {
+    display: flex; align-items: center;
+    padding: 6px 10px; margin: 0 12px;
+    border-radius: 6px; cursor: pointer; user-select: none;
+    color: #1d1d1f; transition: background 0.1s, color 0.1s;
+}
+
+.tree-item:hover { background-color: rgba(0,0,0,0.06); }
+
+/* Mac 经典的蓝底白字选中态 */
+.tree-item.active { 
+    background-color: rgba(0, 0, 0, 0.08); /* 极淡的黑色覆盖，体现毛玻璃质感 */
+    color: #000;                           /* 纯黑色字体，提升清晰度 */
+    font-weight: 600;                      /* 稍微加粗，无需花哨颜色 */
+}
+
+.folder-icon { 
+    display: inline-block; width: 14px; margin-right: 6px; 
+    font-size: 10px; color: #86868b; 
+    transition: transform 0.2s; text-align: center; 
+}
+.tree-item.active .folder-icon { color: rgba(255,255,255,0.8); }
+.folder-open > .tree-item > .folder-icon { transform: rotate(90deg); }
+.folder-open > ul { display: block; }
+
+/* 隐藏生硬的滚动条，鼠标悬浮时才显示细条 */
+.sidebar::-webkit-scrollbar { width: 0px; background: transparent; }
+.sidebar:hover::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+
+/* ================== Responsive Logic ================== */
+/* PC Desktop: 默认展开 */
+@media (min-width: 769px) {
+    .sidebar.collapsed {
+        width: 0;
+        border-right: none;
+        overflow: hidden;
+    }
+}
+
+/* Mobile: 默认隐藏并在左侧固定 */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        height: 100vh;
+        left: 0;
+        top: 0;
+        width: 280px;
+        transform: translateX(-100%);
+        box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .toggle-btn { bottom: 20px; left: 20px; }
+}
+
+/* ================== Main Content (Telegraph Style) ================== */
+.main-content {
+    flex: 1;
+    overflow-y: auto;
+    background: #fff;
+    scroll-behavior: smooth;
+}
+
+.tl-article { max-width: 660px; margin: 0 auto; padding: 60px 20px 100px 20px; }
+.tl-content { font-family: Georgia, serif; }
+
+figure { margin: 0 0 32px 0; padding: 0; display: block; }
+figure img {
+    width: 100%; height: auto; display: block; border: 0;
+    background-color: #f4f5f6; transition: opacity 0.3s ease; cursor: pointer;
+    border-radius: 4px;
+}
+
+h1 {
+    font-family: Georgia, serif; font-size: 32px; font-weight: 700;
+    line-height: 1.15; color: #000000; margin: 0 0 12px 0; letter-spacing: -0.01em;
+}
+
+.tl-meta { font-size: 15px; color: #79828b; margin: 0; }
+.tl-meta .author { color: #212121d6; text-decoration: none; }
+.tl-meta .divider { padding: 0 4px; color: #b0b7bd; }
+
+</style>
+</head>
+
+<body>
+
+<button class="toggle-btn" id="sidebarToggle" aria-label="Toggle Sidebar">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+</button>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <label class="btn-update">
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="refresh-cw" aria-hidden="true" class="lucide lucide-refresh-cw w-4 h-4 text-gray-500"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
+            更新图库配置
+            <input type="file" webkitdirectory multiple onchange="handleFolderSelect(event)">
+        </label>
+    </div>
+
+    <ul class="tree-menu" id="sidebarMenu"></ul>
+</aside>
+
+<!-- main -->
+<main class="main-content" style="background-color: #f5f5f7; display: flex; align-items: flex-start; justify-content: center; ">
+       <div class="tl-article">
+        <header>
+            <h1 id="galleryTitle" style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 32px;"></span> 
+            </h1>
+            <div class="tl-meta" id="galleryMeta">
+                <span class="author"></span>
+                <span class="divider">·</span>
+                <time></time>
+            </div>
+        </header>
+
+        <div class="tl-content" id="galleryContent"> 
+    <!-- macOS 窗口主容器 -->
+    <div style="width: 100%; max-width: 540px; background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.08); overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;">
+
+        <!-- 顶部 Title Bar (红黄绿按钮) -->
+        <div style="height: 40px; background: rgba(246, 246, 246, 0.5); border-bottom: 1px solid rgba(0,0,0,0.06); display: flex; align-items: center; padding: 0 16px; position: relative;">
+            <div style="display: flex; gap: 8px;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background: #FF5F56; border: 1px solid #E0443E;"></div>
+                <div style="width: 12px; height: 12px; border-radius: 50%; background: #FFBD2E; border: 1px solid #DEA123;"></div>
+                <div style="width: 12px; height: 12px; border-radius: 50%; background: #27C93F; border: 1px solid #1AAB29;"></div>
+            </div>
+            <div style="position: absolute; left: 50%; transform: translateX(-50%); font-size: 13px; font-weight: 600; color: #4a4a4a; user-select: none;">
+                设置助理
+            </div>
+        </div>
+
+        <!-- 内容区域 -->
+        <div style="padding: 36px 40px 44px 40px;">
+            <h1 style="font-size: 26px; font-weight: 700; margin: 0 0 6px 0; color: #1d1d1f; letter-spacing: -0.4px;">欢迎使用本地图库</h1>
+            <p style="font-size: 14px; color: #86868b; margin: 0 0 32px 0; line-height: 1.5;">只需完成基础配置，即可在本地以原生体验浏览你的相册。</p>
+
+            <!-- 步骤列表 -->
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+
+                <!-- Step 1 -->
+                <div style="display: flex; gap: 16px;">
+                    <div style="width: 28px; height: 28px; border-radius: 50%; background: #e8f2ff; color: #007aff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0;">1</div>
+                    <div>
+                        <div style="font-size: 15px; font-weight: 600; color: #1d1d1f; margin-bottom: 2px;">选择图片目录</div>
+                        <div style="font-size: 13px; color: #515154; line-height: 1.5;">
+                            点击左侧边栏的 <span style="display: inline-block; background: #ffffff; border: 1px solid rgba(0,0,0,0.1); border-radius: 5px; padding: 1px 6px; font-size: 11px; font-weight: 500; color: #1d1d1f; box-shadow: 0 1px 1px rgba(0,0,0,0.03); margin: 0 2px;">更新图库配置</span>，选中网页当前目录内存储图片的文件夹。
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div style="display: flex; gap: 16px;">
+                    <div style="width: 28px; height: 28px; border-radius: 50%; background: #e8f2ff; color: #007aff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0;">2</div>
+                    <div>
+                        <div style="font-size: 15px; font-weight: 600; color: #1d1d1f; margin-bottom: 2px;">保存配置文件</div>
+                        <div style="font-size: 13px; color: #515154; line-height: 1.5;">
+                            浏览器会自动扫描目录内(包含子目录)所有图片并下载 <code style="font-family: ui-monospace, SFMono-Regular, Consolas, monospace; background: rgba(0,0,0,0.05); padding: 1px 5px; border-radius: 4px; font-size: 12px; color: #d03050;">setting.js</code> 数据文件。
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div style="display: flex; gap: 16px;">
+                    <div style="width: 28px; height: 28px; border-radius: 50%; background: #e8f2ff; color: #007aff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0;">3</div>
+                    <div>
+                        <div style="font-size: 15px; font-weight: 600; color: #1d1d1f; margin-bottom: 2px;">保存或替换并刷新</div>
+                        <div style="font-size: 13px; color: #515154; line-height: 1.5;">
+                            将该配置移动到本网页所在目录，按 <span style="display: inline-block; background: #ffffff; border: 1px solid rgba(0,0,0,0.15); border-radius: 4px; padding: 1px 5px; font-size: 11px; font-weight: 600; color: #1d1d1f; box-shadow: 0 1px 0px rgba(0,0,0,0.05); border-bottom-width: 2px;">F5</span> 或 <span style="display: inline-block; background: #ffffff; border: 1px solid rgba(0,0,0,0.15); border-radius: 4px; padding: 1px 5px; font-size: 11px; font-weight: 600; color: #1d1d1f; box-shadow: 0 1px 0px rgba(0,0,0,0.05); border-bottom-width: 2px;">⌘ R</span> 刷新即可。
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- 底部提示信息 -->
+            <div style="margin-top: 36px; padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.06); display: flex; align-items: flex-start; gap: 8px; color: #86868b; font-size: 12px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #007aff; margin-top: 2px; flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <span style="line-height: 1.5;">在左侧选择相册后，此向导会自动关闭。配置好后，未来双击打开网页即可直接看图，无需重复操作。</span>
+            </div>
+        </div>
+    </div>
+ </div>
+    </div>
+</main>
+
+<script>
+window.galleryData = window.galleryData || {};
+
+/* ===================== UI 交互控制逻辑 ===================== */
+const sidebar = document.getElementById('sidebar');
+const toggleBtn = document.getElementById('sidebarToggle');
+const overlay = document.getElementById('sidebarOverlay');
+
+function toggleSidebar() {
+    if (window.innerWidth <= 768) {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('show');
+    } else {
+        sidebar.classList.toggle('collapsed');
+    }
+}
+
+// 绑定折叠按钮与遮罩层点击事件
+toggleBtn.addEventListener('click', toggleSidebar);
+overlay.addEventListener('click', () => {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('show');
+});
+
+
+/* ===================== 初始化 ===================== */
+function initializeApp() {
+    const menu = document.getElementById('sidebarMenu');
+    menu.innerHTML = '<li style="padding:20px;color:#999;">正在加载 setting.js...</li>';
+
+    if (window.gallerySettings) {
+        window.galleryData = window.gallerySettings;
+    }
+
+// 如果没有数据，直接 return，保留页面上默认显示的“使用说明”
+    if (!window.galleryData || Object.keys(window.galleryData).length === 0) {
+        return; 
+    }
+
+    renderSidebarTree();
+}
+
+initializeApp();
+
+/* ===================== 侧栏渲染逻辑 ===================== */
+function renderSidebarTree() {
+    const menuContainer = document.getElementById('sidebarMenu');
+    menuContainer.innerHTML = '';
+
+    if (Object.keys(window.galleryData).length === 0) {
+        menuContainer.innerHTML = '<li style="padding:20px;color:#999;">无可用图库</li>';
+        return;
+    }
+
+    for (const [dbName, dbData] of Object.entries(window.galleryData)) {
+        menuContainer.appendChild(buildTreeNodes(dbName, dbData));
+    }
+}
+
+function buildTreeNodes(name, nodeData) {
+    const li = document.createElement('li');
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'tree-item';
+
+    const hasSubDirs = Object.keys(nodeData).some(k => k !== '_images');
+    const hasImages = nodeData._images && nodeData._images.length > 0;
+
+    // 使用更干净的符号替代 Emoji
+    itemDiv.innerHTML = `<span class="folder-icon">${hasSubDirs ? '▶' : '•'}</span> <span style="word-break: break-all;">${name}</span>`;
+    li.appendChild(itemDiv);
+
+    itemDiv.onclick = (e) => {
+        e.stopPropagation();
+
+        if (hasSubDirs) li.classList.toggle('folder-open');
+
+        document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('active'));
+        itemDiv.classList.add('active');
+
+        if (hasImages) {
+            renderGallery(name, nodeData._images);
+            // 【手机端交互优化】：点击渲染图库后，自动收起侧边栏
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+            }
+        }
+    };
+
+    if (hasSubDirs) {
+        const ul = document.createElement('ul');
+        for (const [subName, subData] of Object.entries(nodeData)) {
+            if (subName === '_images') continue;
+            ul.appendChild(buildTreeNodes(subName, subData));
+        }
+        li.appendChild(ul);
+    }
+
+    return li;
+}
+
+/* ===================== 图片渲染 ===================== */
+function renderGallery(title, imagesArray) {
+    document.getElementById('galleryTitle').textContent = title;
+    
+    // 获取当天的优雅日期格式，如 "July 05, 2026"
+    const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: '2-digit', year: 'numeric' });
+    
+    document.getElementById('galleryMeta').innerHTML = `
+        <div class="tl-meta">
+            <span class="author">Anonymous</span>
+            <span class="divider">·</span>
+            <time>${dateStr}</time>
+        </div>`;
+
+    const content = document.getElementById('galleryContent');
+    content.innerHTML = '';
+
+    imagesArray.forEach(img => {
+        const name = img.split('/').pop().split('\\').pop().replace(/\.[^/.]+$/, "");
+        content.innerHTML += `
+            <figure>
+                <img src="${img}" title="${name}" loading="lazy">
+            </figure>
+        `;
+    });
+}
+
+ 
+/* ===================== 生成 setting.js (已优化排序) ===================== */
+function handleFolderSelect(event) {
+    const files = event.target.files;
+    if (!files.length) return;
+
+    let tree = {};
+    let root = "";
+
+    for (let file of files) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['jpg','jpeg','png','gif','webp'].includes(ext)) continue;
+
+        const parts = file.webkitRelativePath.split('/');
+
+        if (!root) root = parts[0];
+
+        let cur = tree;
+
+        for (let i = 1; i < parts.length - 1; i++) {
+            const dir = parts[i];
+            if (!cur[dir]) cur[dir] = {};
+            cur = cur[dir];
+        }
+
+        if (!cur._images) cur._images = [];
+        cur._images.push(file.webkitRelativePath);
+    }
+
+    // --- 新增：递归排序函数 ---
+    function sortTree(node) {
+        for (let key in node) {
+            if (key === '_images') {
+                // 对图片路径按文件名进行自然排序
+                node[key].sort((a, b) => {
+                    const nameA = a.split('/').pop().toLowerCase();
+                    const nameB = b.split('/').pop().toLowerCase();
+                    return nameA.localeCompare(nameB, undefined, {numeric: true, sensitivity: 'base'});
+                });
+            } else if (typeof node[key] === 'object') {
+                sortTree(node[key]);
+            }
+        }
+    }
+
+    sortTree(tree);
+    // -----------------------
+
+    const js = `window.gallerySettings = ${JSON.stringify(tree, null, 4)};`;
+    downloadFile(js, "setting.js");
+    alert("setting.js 已生成（图片已按名称排序），请替换后刷新页面");
+}
+
+/* ===================== download ===================== */
+function downloadFile(content, name) {
+    const blob = new Blob([content], { type: "text/javascript" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+/* ===================== 控制台致敬信息 ===================== */
+window.addEventListener('load', () => {
+    const consoleInfo = `
+发布地址：https://www.ximi.me/post-6044.html
+版本：v1.01 
+作者：希米
+说明：本地图库，支持目录树浏览，原生体验，Telegraph风格，macOS化UI，支持移动端浏览。
+更新时间：2036-07-05`;
+    
+    console.log("%c " + consoleInfo, "color: #555; font-size: 13px; line-height: 1.6; padding: 10px; background: #f0f0f0; border-radius: 5px;");
+});
+</script>
+</body>
+</html>
