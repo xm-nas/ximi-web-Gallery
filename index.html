@@ -1,7 +1,7 @@
 
 <!-- 
 		发布地址：https://www.ximi.me/post-6044.html
-		版本：v1.02 
+		版本：v1.03
         作者：希米
         说明：本地图库，支持目录树浏览，原生体验,Telegraph风格，macOS化UI，支持移动端浏览。
 		更新时间：2036-07-11
@@ -10,7 +10,7 @@
 <html lang="zh-CN"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ximi Gallery Pro</title>
+<title>Ximi Gallery</title>
 
 <script src="setting.js"></script>
 
@@ -80,7 +80,7 @@ header { margin-bottom: 35px; }
     z-index: 1000; flex-shrink: 0;
 }
 
-.sidebar-header { padding: 20px 16px 12px 16px; }
+.sidebar-header {     padding: 15px 15px 0 15px;}
 
 /* 重新设计的配置按钮：Mac 辅助按钮风格 */
 .btn-update {
@@ -102,7 +102,7 @@ header { margin-bottom: 35px; }
 
 /* 目录树 macOS 化：更小的字号，紧凑的行高 */
 .tree-menu { 
-    padding: 0 0 80px 0; margin: 0; list-style: none; 
+    padding: 0px 15px 80px 15px; margin: 0; list-style: none; 
     font-size: 13px; 
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; 
 }
@@ -329,9 +329,7 @@ figure img, figure video {
 /* ================== 修改：侧栏头部与原生 macOS UI 美化 ================== */
 
 /* 移除原本生硬的内边距，交由内部元素控制 */
-.sidebar-header {
-    padding: 0; 
-}
+
 
 /* 新增：品牌 Logo 与标题区域 */
 .sidebar-brand {
@@ -509,6 +507,74 @@ figure img, figure video {
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+
+
+/* 确保 sidebar 容器有高度并且使用 Flexbox 布局 */
+.sidebar {
+    /* 你的其他 sidebar 样式 */
+    
+    /* background-color: #333; 示例背景色 */
+    color: white; /* 示例文字颜色 */
+    padding: 1px;
+    height: 100vh; /* 设置高度为视口高度，确保它填满屏幕 */
+    
+    /* 关键：使用 Flexbox 实现垂直布局 */
+    display: flex;
+    flex-direction: column;
+}
+
+/* 让主要内容区域占据剩余空间，将 footer 推到底部 */
+.sidebar-main-content {
+    flex: 1; /* 这个属性是关键 */
+    /* 其他主要内容样式 */
+    overflow-y: auto; /* 如果主要内容过长，允许内部滚动 */
+}
+
+/* 样式化底部区域 */
+.sidebar-footer {
+    border-top: 1.2px solid #55555545; /* 可选：添加顶部边框 */
+    margin-top: auto; /* 关键：确保它被“推”到底部 */
+    padding:15px 15px 25px 15px;
+    text-align: center; /* 内容居中 */
+    font-size: 0.9em; /* 减小字体 */
+    color: #838383; /* 调整字体颜色 */
+}
+
+/* 样式化底部的段落 */
+.sidebar-footer p {
+    margin: 5px 0;    font-size: 12px;
+}
+
+/* 样式化 GitHub 链接 */
+.sidebar-footer .github-link a {
+    color: #838383; /* 链接颜色 */
+    text-decoration: underline; /* 添加下划线 */
+    display: inline-block;
+    padding: 5px;
+}
+
+.sidebar-footer .github-link a:hover {
+    color: #0b84ff; /* 悬停时颜色 */
+}
+
+.sidebar-footer .copyright a {
+    color: #838383; /* 链接颜色 */
+    text-decoration: underline; /* 添加下划线 */
+    display: inline-block;
+    padding: 5px;
+}
+
+.sidebar-footer .copyright a:hover {
+    color: #0b84ff; /* 悬停时颜色 */
+}
+
+
+
+/* 如果你使用了图标，可以调整图标和文字的间距 */
+.sidebar-footer .github-link a i {
+    margin-right: 5px;
+}
+
 </style>
 
 
@@ -528,34 +594,37 @@ figure img, figure video {
 
 <aside class="sidebar" id="sidebar">
 
-    <div class="sidebar-header">
-        <div class="sidebar-brand">
+<div class="sidebar-header">
+        <div class="sidebar-brand" style="
+    padding: 40px 15px 25px 22px;
+">
             <div class="brand-icon" style="
     width: 60px;
     height: 60px;
+    padding-top: 4px;
     background: linear-gradient(135deg, #dfdfe500, #ceceeb75);
-    border-radius: 7px;
+    border-radius: 13px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #fff;
     box-shadow: 0 2px 8px rgb(11 132 255 / 45%);
 ">
-              <img src="./favicon.ico" style="/* margin: 0px 0 -60px 0; */width: 56px;height: 56px;" alt="Logo">
+              <img src="./favicon.png" style="/* margin: 0px 0 -60px 0; */width: 50px;height: 50px;" alt="Logo">
             </div>
             <div class="brand-title">Ximi Gallery</div>
         </div>
 
         <div class="sidebar-actions">
             <label class="btn-update">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
-                <span>更新图库配置</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="settings" aria-hidden="true" class="lucide lucide-settings"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                               <span>图库配置</span>
                 <input type="file" webkitdirectory="" multiple="" onchange="handleFolderSelect(event)">
             </label>
             
             <button class="btn-update" id="btnToggleMode" onclick="toggleViewMode()">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
-                <span id="modeText">切换瀑布流</span>
+                <span id="modeText">平铺模式</span>
             </button>
         </div>
         
@@ -563,6 +632,22 @@ figure img, figure video {
     </div>
 
     <ul class="tree-menu" id="sidebarMenu"><li class="folder-open"><div class="tree-item"><span class="folder-icon">▶</span> <span style="word-break: break-all;">古风</span></div><ul><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">捻发作须</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">湖畔闲思</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">丐帮女侠</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">金风玉露</span></div></li></ul></li><li class="folder-open"><div class="tree-item"><span class="folder-icon">▶</span> <span style="word-break: break-all;">美图</span></div><ul><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">年年 - 花野</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">年年 - 绿茵</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">年年 - 城</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">桜桃喵 - 盏月</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">桜桃喵 - 夜纱</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">年年 风</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">年年 - 琳妮特</span></div></li></ul></li><li class="folder-open"><div class="tree-item"><span class="folder-icon">▶</span> <span style="word-break: break-all;">壁纸</span></div><ul><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">小清新</span></div></li><li><div class="tree-item active"><span class="folder-icon">•</span> <span style="word-break: break-all;">春日私语</span></div></li></ul></li></ul>
+
+<!-- 添加到容器底部的内容 -->
+    <div class="sidebar-footer">
+        <p class="copyright">© 2026 [<a href="https://www.ximi.me/post-6044.html" target="_blank">ximi</a>] All Rights Reserved.</p>
+ <p class="copyright">version：v1.03</p> 
+        
+        <p class="github-link">
+            <a href="https://github.com/xm-nas/ximi-web-Gallery" target="_blank" rel="noopener noreferrer">
+                <!-- 可选：添加一个 GitHub 图标 -->
+                <i class="fab fa-github"></i> GitHub
+            </a>
+        </p>
+    </div>
+
+
+
 </aside>
 
 <!-- main -->
@@ -759,11 +844,11 @@ function toggleViewMode() {
     if (isWaterfallMode) {
         article.classList.add('waterfall-container');
         content.classList.add('waterfall-mode');
-        modeText.textContent = "切换单列模式";
+        modeText.textContent = "大图预览";
     } else {
         article.classList.remove('waterfall-container');
         content.classList.remove('waterfall-mode');
-        modeText.textContent = "切换瀑布流";
+        modeText.textContent = "平铺预览";
     }
 }
 
@@ -847,10 +932,64 @@ function buildTreeNodes(name, nodeData) {
         document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('active'));
         itemDiv.classList.add('active');
 
+if (hasImages) {
+            renderGallery(name, nodeData._images);
+            // 【手机端交互优化】：点击渲染图库后，自动收起侧边栏
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+                
+                // 使用 setProperty 并加上 'important'，确保 100% 覆盖任何顽固 CSS
+                sidebar.style.setProperty('width', '0px', 'important');
+                sidebar.style.setProperty('min-width', '0px', 'important');
+                sidebar.style.setProperty('padding', '0px', 'important');
+                sidebar.style.setProperty('margin', '0px', 'important');
+                sidebar.style.setProperty('border', 'none', 'important');
+                sidebar.style.setProperty('overflow', 'hidden', 'important');
+                
+                // 如果父级是 flex，加上这行：
+                sidebar.style.setProperty('flex', '0 0 0px', 'important'); 
+            }
+        }
+    };
+
+    if (hasSubDirs) {
+        const ul = document.createElement('ul');
+        for (const [subName, subData] of Object.entries(nodeData)) {
+            if (subName === '_images') continue;
+            ul.appendChild(buildTreeNodes(subName, subData));
+        }
+        li.appendChild(ul);
+    }
+
+    return li;
+}
+
+function buildTreeNodes(name, nodeData) {
+    const li = document.createElement('li');
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'tree-item';
+
+    const hasSubDirs = Object.keys(nodeData).some(k => k !== '_images');
+    const hasImages = nodeData._images && nodeData._images.length > 0;
+
+    itemDiv.innerHTML = `<span class="folder-icon">${hasSubDirs ? '▶' : '•'}</span> <span style="word-break: break-all;">${name}</span>`;
+    li.appendChild(itemDiv);
+
+    itemDiv.onclick = (e) => {
+        e.stopPropagation();
+
+        if (hasSubDirs) li.classList.toggle('folder-open');
+
+        document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('active'));
+        itemDiv.classList.add('active');
+
         if (hasImages) {
             renderGallery(name, nodeData._images);
             // 【手机端交互优化】：点击渲染图库后，自动收起侧边栏
             if (window.innerWidth <= 768) {
+                // 彻底抛弃 style.width = '0px' 这种脏代码！
+                // 只需要移除 open 类名，让 CSS 的 translateX 去执行完美的滑动隐藏！
                 sidebar.classList.remove('open');
                 overlay.classList.remove('show');
             }
@@ -870,31 +1009,7 @@ function buildTreeNodes(name, nodeData) {
 }
 
 /* ===================== 图片渲染 ===================== */
-// function renderGallery(title, imagesArray) {
-//     document.getElementById('galleryTitle').textContent = title;
-    
-//     // 获取当天的优雅日期格式，如 "July 05, 2026"
-//     const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: '2-digit', year: 'numeric' });
-    
-//     document.getElementById('galleryMeta').innerHTML = `
-//         <div class="tl-meta">
-//             <span class="author">Anonymous</span>
-//             <span class="divider">·</span>
-//             <time>${dateStr}</time>
-//         </div>`;
 
-//     const content = document.getElementById('galleryContent');
-//     content.innerHTML = '';
-
-//     imagesArray.forEach(img => {
-//         const name = img.split('/').pop().split('\\').pop().replace(/\.[^/.]+$/, "");
-//         content.innerHTML += `
-//             <figure>
-//                 <img src="${img}" title="${name}" loading="lazy">
-//             </figure>
-//         `;
-//     });
-// }
 
 function renderGallery(title, mediaArray) {
     document.getElementById('galleryTitle').textContent = title;
@@ -976,7 +1091,6 @@ function handleFolderSelect(event) {
 
     for (let file of files) {
         const ext = file.name.split('.').pop().toLowerCase();
-      //  if (!['jpg','jpeg','png','gif','webp'].includes(ext)) continue;
 // 增加了对常见 web 视频格式的支持
 if (!['jpg','jpeg','png','gif','webp','mp4','webm','ogg','mov'].includes(ext)) continue;
         const parts = file.webkitRelativePath.split('/');
