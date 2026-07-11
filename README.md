@@ -20,12 +20,11 @@
   <tr>
     <td><img src="docs/1.png"></td>
     <td><img src="docs/2.png"></td>
-    <td><img src="docs/3.png"></td>
-  </tr>
+     </tr>
 </table>
 
 ## 关于
 
 - 作者：希米
 - 原文：[https://www.ximi.me/post-6044.html](https://www.ximi.me/post-6044.html)
-- 最后更新：2026-07-05
+- 最后更新：2026-07-11
