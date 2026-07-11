@@ -1,4 +1,4 @@
-# ximi-web-Gallery
+# ximi-Gallery
 
 本地 Web 图库，提供原生浏览体验。Telegraph 风格，macOS 化 UI，完美适配移动端。
 
@@ -18,8 +18,8 @@
 
 <table>
   <tr>
-    <td><img src="docs/1.png"></td>
-    <td><img src="docs/2.png"></td>
+    <td><img src="./1.png"></td>
+    <td><img src="./2.png"></td>
      </tr>
 </table>
 
