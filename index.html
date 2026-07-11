@@ -6,14 +6,14 @@
         说明：本地图库，支持目录树浏览，原生体验,Telegraph风格，macOS化UI，支持移动端浏览。
 		更新时间：2036-07-05
 -->
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
+        
+<html lang="zh-CN"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ximi Gallery Pro</title>
 
 <script src="setting.js"></script>
+
 
 <style>
 /* ================== Base & Typography ================== */
@@ -176,11 +176,8 @@ header { margin-bottom: 35px; }
 .tl-content { font-family: Georgia, serif; }
 
 figure { margin: 0 0 32px 0; padding: 0; display: block; }
-figure img {
-    width: 100%; height: auto; display: block; border: 0;
-    background-color: #f4f5f6; transition: opacity 0.3s ease; cursor: pointer;
-    border-radius: 4px;
-}
+figure img, figure video{width:100%;height:auto;display:block;border:0;background-color:#f4f5f6;border-radius:4px;}
+figure img{cursor:pointer;}
 
 h1 {
     font-family: Georgia, serif; font-size: 32px; font-weight: 700;
@@ -191,7 +188,330 @@ h1 {
 .tl-meta .author { color: #212121d6; text-decoration: none; }
 .tl-meta .divider { padding: 0 4px; color: #b0b7bd; }
 
+
+
+/* ================== 修改：瀑布流多列布局 ================== */
+.waterfall-mode.tl-content {
+    column-count: 4; /* 修改为 4 列 */
+    column-gap: 20px;
+}
+.waterfall-mode figure {
+    break-inside: avoid;
+    margin-bottom: 20px;
+}
+
+/* 瀑布流响应式降级 */
+@media (max-width: 1200px) { .waterfall-mode.tl-content { column-count: 3; } }
+@media (max-width: 900px)  { .waterfall-mode.tl-content { column-count: 2; } }
+@media (max-width: 600px)  { .waterfall-mode.tl-content { column-count: 1; } }
+
+/* ================== 新增：入场动画与悬浮动效 ================== */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+figure { 
+    margin: 0 0 32px 0; 
+    padding: 0; 
+    display: block; 
+    /* 增加平滑的入场动画 */
+    animation: fadeInUp 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; 
+}
+
+figure img, figure video {
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s ease;
+}
+
+
+
+/* ================== 新增：灯箱 (Lightbox) 样式 ================== */
+.lightbox-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); /* macOS 毛玻璃质感 */
+    z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.35s ease;
+}
+
+.lightbox-overlay.show { opacity: 1; pointer-events: auto; }
+
+.lightbox-img {
+    max-width: 92%; max-height: 92%;
+    border-radius: 8px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    transform: scale(0.95);
+    transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.lightbox-overlay.show .lightbox-img { transform: scale(1); }
+
+.lightbox-close {
+    position: absolute; top: 25px; right: 25px;
+    width: 44px; height: 44px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 50%; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.2s, transform 0.2s;
+}
+
+.lightbox-close:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
+
+.tl-article.waterfall-container {
+    max-width: 900px;
+}
+
+/* ================== 修改：悬浮动效（仅在瀑布流触发） ================== */
+/* 仅在瀑布流模式下，鼠标指向图片才会触发轻微放大与阴影 */
+.waterfall-mode figure img:hover, 
+.waterfall-mode figure video:hover {
+    transform: scale(1.015);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    z-index: 10;
+    position: relative;
+}
+
+/* ================== 修改与新增：灯箱及双击放大样式 ================== */
+.lightbox-img {
+    max-width: 92%; max-height: 92%;
+    border-radius: 8px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    transform: scale(0.95);
+    /* 增加 transform 动画，使双击放大与切换过渡更平滑 */
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    cursor: zoom-in;
+    user-select: none; /* 防止双击时文字被选中 */
+}
+
+/* 灯箱双击放大状态 */
+.lightbox-img.zoomed {
+    transform: scale(1.6); 
+    cursor: zoom-out;
+}
+
+/* 灯箱左右切换按钮样式 */
+.lightbox-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 56px;
+    height: 56px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s, opacity 0.2s;
+    z-index: 2100;
+}
+.lightbox-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-50%) scale(1.05);
+}
+.lightbox-btn:active {
+    transform: translateY(-50%) scale(0.95);
+}
+.lightbox-btn.prev { left: 40px; }
+.lightbox-btn.next { right: 40px; }
+
+/* 移动端轻量隐藏导航键，靠手势或点击两侧 */
+@media (max-width: 768px) {
+    .lightbox-btn { width: 44px; height: 44px; }
+    .lightbox-btn.prev { left: 15px; }
+    .lightbox-btn.next { right: 15px; }
+}
+/* ================== 修改：侧栏头部与原生 macOS UI 美化 ================== */
+
+/* 移除原本生硬的内边距，交由内部元素控制 */
+.sidebar-header {
+    padding: 0; 
+}
+
+/* 新增：品牌 Logo 与标题区域 */
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    padding: 24px 16px 16px 20px;
+    gap: 12px;
+}
+
+.brand-icon {
+    width: 30px;
+    height: 30px;
+    /* macOS 经典的亮蓝色渐变 */
+    background: linear-gradient(135deg, #0A84FF, #005EBB);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(10, 132, 255, 0.3);
+}
+
+.brand-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1d1d1f;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+    letter-spacing: -0.2px;
+}
+
+/* 新增：动作按钮组容器 */
+.sidebar-actions {
+    padding: 0 12px 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px; /* macOS 侧栏列表项之间非常紧凑 */
+}
+
+/* 重新设计 .btn-update：去除边框，改为左对齐的沉浸式列表项 */
+.btn-update {
+    display: flex; 
+    align-items: center; 
+    justify-content: flex-start; /* 靠左对齐，与下方目录树对齐 */
+    gap: 10px;
+    width: 100%; 
+    padding: 8px 10px;
+    background: transparent; 
+    color: #1d1d1f;
+    border: none; /* 去除全部边框 */
+    border-radius: 6px;
+    cursor: pointer; 
+    font-size: 13px; 
+    font-weight: 500;
+    transition: background 0.15s ease;
+    box-shadow: none; /* 去除阴影 */
+}
+
+/* 按钮图标统一使用 Mac 蓝，增强视觉引导 */
+.btn-update svg {
+    color: #0A84FF; 
+    flex-shrink: 0;
+}
+
+.btn-update:hover { 
+    background: rgba(0, 0, 0, 0.06); /* 经典的浅灰背景悬浮反馈 */
+}
+
+.btn-update:active {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.btn-update input { display: none; }
+
+/* 新增：侧栏分组小标题（类似 macOS 中"个人收藏"、"标签"） */
+.sidebar-section-title {
+    padding: 12px 16px 4px 20px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #86868b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ================== 修改：彻底统一侧栏排版体系 (完美对齐版) ================== */
+
+/* 1. 品牌区调整：视觉上更紧凑，缩小不协调的突兀感 */
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    padding: 20px 12px 12px 22px; 
+    gap: 10px;
+}
+
+.brand-icon {
+    width: 26px; height: 26px;
+    background: linear-gradient(135deg, #0A84FF, #005EBB);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(10, 132, 255, 0.2);
+}
+.brand-icon svg { width: 14px; height: 14px; }
+
+.brand-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d1d1f8a;
+    letter-spacing: -0.1px;
+}
+
+/* 2. 移除外层容器多余的 padding */
+.sidebar-actions {
+    padding: 3px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* 3. ★ 核心修复：强制统一“功能按钮”与“相册树节点”的宽高、间距与排版 ★ */
+.btn-update, .tree-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;           /* 统一图标与文字的间距 */
+    /* margin: 0 12px; */     /* 统一外边距，确保悬浮灰色背景块左中右宽度完美一致 */
+    padding: 6px 10px;  /* 统一内边距 */
+    /* width: auto; */        /* 覆盖之前的 100% */
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #1d1d1f;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.1s ease;
+    /* box-shadow: none; */
+    /* text-decoration: none; */
+    /* line-height: 1.2; */
+}
+
+/* 统一悬浮背景色 */
+.btn-update:hover, .tree-item:hover { 
+    background: rgba(0, 0, 0, 0.05); 
+}
+
+/* 让功能按钮的 svg 占位与下方相册的三角形占位完全相同 */
+.btn-update svg {
+    width: 16px; height: 16px;
+    color: #0A84FF; 
+    flex-shrink: 0;
+    stroke-width: 2px;
+}
+
+/* 修正下方树形菜单的图标，使其居中且宽度固定为 16px，从而保证文字完美对齐 */
+.folder-icon { 
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    width: 16px;         /* 与上方的 svg 宽度保持完全一致 */
+    height: 16px;
+    margin-right: 0;     /* 移除旧的 margin，由 flex gap 统一控制图文间距 */
+    font-size: 10px; 
+    color: #86868b; 
+    transition: transform 0.2s; 
+}
+
+/* 4. 小标题对齐修正 */
+.sidebar-section-title {
+    padding: 16px 0 6px 0;
+    /* margin 22px 是因为：高亮块 margin 12px + 内部 padding 10px = 文字起步位置 22px */
+    margin: 0 22px; 
+    font-size: 11px;
+    font-weight: 600;
+    color: #86868b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
 </style>
+
+
 </head>
 
 <body>
@@ -207,15 +527,42 @@ h1 {
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <aside class="sidebar" id="sidebar">
+
     <div class="sidebar-header">
-        <label class="btn-update">
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="refresh-cw" aria-hidden="true" class="lucide lucide-refresh-cw w-4 h-4 text-gray-500"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
-            更新图库配置
-            <input type="file" webkitdirectory multiple onchange="handleFolderSelect(event)">
-        </label>
+        <div class="sidebar-brand">
+            <div class="brand-icon" style="
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #dfdfe500, #ceceeb75);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 2px 8px rgb(11 132 255 / 45%);
+">
+              <img src="http://192.168.1.10:888/favicon.ico" style="/* margin: 0px 0 -60px 0; */width: 56px;height: 56px;" alt="Logo">
+            </div>
+            <div class="brand-title">Ximi Gallery</div>
+        </div>
+
+        <div class="sidebar-actions">
+            <label class="btn-update">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
+                <span>更新图库配置</span>
+                <input type="file" webkitdirectory="" multiple="" onchange="handleFolderSelect(event)">
+            </label>
+            
+            <button class="btn-update" id="btnToggleMode" onclick="toggleViewMode()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
+                <span id="modeText">切换瀑布流</span>
+            </button>
+        </div>
+        
+        <div class="sidebar-section-title">本地相册</div>
     </div>
 
-    <ul class="tree-menu" id="sidebarMenu"></ul>
+    <ul class="tree-menu" id="sidebarMenu"><li class="folder-open"><div class="tree-item"><span class="folder-icon">▶</span> <span style="word-break: break-all;">古风</span></div><ul><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">捻发作须</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">湖畔闲思</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">丐帮女侠</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">金风玉露</span></div></li></ul></li><li class="folder-open"><div class="tree-item"><span class="folder-icon">▶</span> <span style="word-break: break-all;">美图</span></div><ul><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">年年 - 花野</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">年年 - 绿茵</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">年年 - 城</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">桜桃喵 - 盏月</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">桜桃喵 - 夜纱</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">年年 风</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">年年 - 琳妮特</span></div></li></ul></li><li class="folder-open"><div class="tree-item"><span class="folder-icon">▶</span> <span style="word-break: break-all;">壁纸</span></div><ul><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">小清新</span></div></li><li><div class="tree-item active"><span class="folder-icon">•</span> <span style="word-break: break-all;">春日私语</span></div></li></ul></li></ul>
 </aside>
 
 <!-- main -->
@@ -302,7 +649,126 @@ h1 {
     </div>
 </main>
 
+<div class="lightbox-overlay" id="lightboxOverlay" onclick="closeLightbox()">
+    <div class="lightbox-close">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+    </div>
+    
+    <button class="lightbox-btn prev" onclick="prevLightboxImage(event)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    
+    <button class="lightbox-btn next" onclick="nextLightboxImage(event)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+
+    <img class="lightbox-img" id="lightboxImg" src="" alt="preview" onclick="event.stopPropagation()" ondblclick="toggleLightboxZoom(event)">
+</div>
+
+
 <script>
+/* ===================== 新增：灯箱控制逻辑 ===================== */
+/* ===================== 修改与新增：灯箱核心控制逻辑 ===================== */
+let currentLightboxIndex = -1; // 记录当前灯箱内图片的索引
+
+function openLightbox(index) {
+    if (!window.currentLightboxImages || !window.currentLightboxImages[index]) return;
+    
+    currentLightboxIndex = index;
+    const overlay = document.getElementById('lightboxOverlay');
+    const img = document.getElementById('lightboxImg');
+    
+    // 切换图片时，必须重置上一张图可能存在的双击放大状态
+    img.classList.remove('zoomed');
+    
+    img.src = window.currentLightboxImages[index];
+    overlay.classList.add('show');
+}
+
+function closeLightbox() {
+    const overlay = document.getElementById('lightboxOverlay');
+    overlay.classList.remove('show');
+    setTimeout(() => {
+        const img = document.getElementById('lightboxImg');
+        img.src = "";
+        img.classList.remove('zoomed');
+    }, 350); 
+}
+
+// 切换至上一张（循环轮播）
+function prevLightboxImage(event) {
+    if (event) event.stopPropagation(); // 阻止事件冒泡引发灯箱关闭
+    if (!window.currentLightboxImages || window.currentLightboxImages.length <= 1) return;
+    
+    let newIndex = currentLightboxIndex - 1;
+    if (newIndex < 0) {
+        newIndex = window.currentLightboxImages.length - 1; // 调转到最后一张
+    }
+    openLightbox(newIndex);
+}
+
+// 切换至下一张（循环轮播）
+function nextLightboxImage(event) {
+    if (event) event.stopPropagation();
+    if (!window.currentLightboxImages || window.currentLightboxImages.length <= 1) return;
+    
+    let newIndex = currentLightboxIndex + 1;
+    if (newIndex >= window.currentLightboxImages.length) {
+        newIndex = 0; // 调转到第一张
+    }
+    openLightbox(newIndex);
+}
+
+// 双击图片切换放大模式
+function toggleLightboxZoom(event) {
+    if (event) event.stopPropagation();
+    const img = document.getElementById('lightboxImg');
+    img.classList.toggle('zoomed');
+}
+
+// 原生原生级加分项：支持键盘左右方向键切换，ESC 键退出
+window.addEventListener('keydown', (e) => {
+    const overlay = document.getElementById('lightboxOverlay');
+    if (!overlay || !overlay.classList.contains('show')) return;
+    
+    if (e.key === 'ArrowLeft') {
+        prevLightboxImage();
+    } else if (e.key === 'ArrowRight') {
+        nextLightboxImage();
+    } else if (e.key === 'Escape') {
+        closeLightbox();
+    }
+});
+
+/* ===================== 修改：renderGallery 函数内部拼接逻辑 ===================== */
+// 找到 renderGallery 函数中遍历 images 和 videos 的部分，替换为以下代码：
+
+
+/* ===================== 视图模式控制 ===================== */
+let isWaterfallMode = false;
+
+function toggleViewMode() {
+    isWaterfallMode = !isWaterfallMode;
+    const article = document.querySelector('.tl-article');
+    const content = document.getElementById('galleryContent');
+    const modeText = document.getElementById('modeText');
+    
+    if (isWaterfallMode) {
+        article.classList.add('waterfall-container');
+        content.classList.add('waterfall-mode');
+        modeText.textContent = "切换单列模式";
+    } else {
+        article.classList.remove('waterfall-container');
+        content.classList.remove('waterfall-mode');
+        modeText.textContent = "切换瀑布流";
+    }
+}
+
+
+
 window.galleryData = window.galleryData || {};
 
 /* ===================== UI 交互控制逻辑 ===================== */
@@ -430,12 +896,10 @@ function buildTreeNodes(name, nodeData) {
 //     });
 // }
 
-function renderGallery(title, imagesArray) {
+function renderGallery(title, mediaArray) {
     document.getElementById('galleryTitle').textContent = title;
     
-    // 获取当天的优雅日期格式，如 "July 05, 2026"
     const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: '2-digit', year: 'numeric' });
-    
     document.getElementById('galleryMeta').innerHTML = `
         <div class="tl-meta">
             <span class="author">Anonymous</span>
@@ -444,30 +908,64 @@ function renderGallery(title, imagesArray) {
         </div>`;
 
     const content = document.getElementById('galleryContent');
-    content.innerHTML = '';
+    
+    // 分离图片与视频
+    const images = [];
+    const videos = [];
+    const videoExts = ['mp4', 'webm', 'ogg', 'mov'];
 
-    imagesArray.forEach(img => {
-        // 保持原逻辑：提取文件名作为 title
+    mediaArray.forEach(media => {
+        const ext = media.split('.').pop().toLowerCase();
+        if (videoExts.includes(ext)) {
+            videos.push(media);
+        } else {
+            images.push(media);
+        }
+    });
+
+     let htmlStr = '';
+    let delayIndex = 0;
+    
+    // 新增：每次渲染新目录时，重置并记录全局灯箱图片队列
+    window.currentLightboxImages = [];
+
+    // 1. 渲染图片
+    images.forEach((img, index) => {
         const name = img.split('/').pop().split('\\').pop().replace(/\.[^/.]+$/, "");
+        const encodedPath = img.replace(/\\/g, '/').split('/').map(segment => encodeURIComponent(segment)).join('/');
         
-        // 新增编码逻辑：
-        // 1. 将可能存在的反斜杠 \ 统一替换为正斜杠 /
-        // 2. 将路径按 / 拆分为数组
-        // 3. 遍历数组，对每一个目录名/文件名进行严格的 URL 编码
-        // 4. 将编码后的数组重新用 / 拼接成完整路径
-        const encodedImgPath = img.replace(/\\/g, '/')
-                                  .split('/')
-                                  .map(segment => encodeURIComponent(segment))
-                                  .join('/');
+        // 将路径压入灯箱队列
+        window.currentLightboxImages.push(encodedPath);
 
-        content.innerHTML += `
-            <figure>
-                <img src="${encodedImgPath}" title="${name}" loading="lazy">
+        // 修改：onclick 改为传入当前图片的索引 index
+        htmlStr += `
+            <figure style="animation-delay: ${delayIndex * 0.03}s">
+                <img src="${encodedPath}" title="${name}" loading="lazy" onclick="openLightbox(${index})" style="cursor: zoom-in;">
             </figure>
         `;
+        delayIndex++;
     });
+
+    // 2. 渲染视频 (保持不变)
+    videos.forEach(vid => {
+        const name = vid.split('/').pop().split('\\').pop().replace(/\.[^/.]+$/, "");
+        const encodedPath = vid.replace(/\\/g, '/').split('/').map(segment => encodeURIComponent(segment)).join('/');
+        htmlStr += `
+            <figure style="animation-delay: ${delayIndex * 0.03}s">
+                <video src="${encodedPath}" title="${name}" controls preload="metadata"></video>
+            </figure>
+        `;
+        delayIndex++;
+    });
+
+    content.innerHTML = htmlStr;
+
+    // 重置滚动条
+    const mainContainer = document.querySelector('.main-content');
+    if (mainContainer) {
+        mainContainer.scrollTop = 0; 
+    }
 }
- 
 /* ===================== 生成 setting.js (已优化排序) ===================== */
 function handleFolderSelect(event) {
     const files = event.target.files;
@@ -478,8 +976,9 @@ function handleFolderSelect(event) {
 
     for (let file of files) {
         const ext = file.name.split('.').pop().toLowerCase();
-        if (!['jpg','jpeg','png','gif','webp'].includes(ext)) continue;
-
+      //  if (!['jpg','jpeg','png','gif','webp'].includes(ext)) continue;
+// 增加了对常见 web 视频格式的支持
+if (!['jpg','jpeg','png','gif','webp','mp4','webm','ogg','mov'].includes(ext)) continue;
         const parts = file.webkitRelativePath.split('/');
 
         if (!root) root = parts[0];
@@ -545,5 +1044,5 @@ window.addEventListener('load', () => {
     console.log("%c " + consoleInfo, "color: #555; font-size: 13px; line-height: 1.6; padding: 10px; background: #f0f0f0; border-radius: 5px;");
 });
 </script>
-</body>
-</html>
+
+</body></html>
