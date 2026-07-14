@@ -18,8 +18,8 @@
 
 <table>
   <tr>
-    <td><img src="./1.png"></td>
-    <td><img src="./2.png"></td>
+    <td><img src="./docs/1.png"></td>
+    <td><img src="./docs/2.png"></td>
      </tr>
 </table>
 
