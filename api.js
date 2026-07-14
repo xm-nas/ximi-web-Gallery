@@ -1,4 +1,5 @@
-window.gallerySettings = {
+window.gallerySettings = window.gallerySettings || [];
+window.gallerySettings.push({
       "Api调用": {
             "短视频": {
                     "_images": [
@@ -2792,5 +2793,5 @@ window.gallerySettings = {
 "https://img.alicdn.com/imgextra/i2/1738635228/O1CN01rgSQcx1oUTiG4spah_!!1738635228.jpg",
 "https://img.alicdn.com/imgextra/i1/1738635228/O1CN01l5w6nU1oUTiFPRMpS_!!1738635228.jpg"
 ]
-        }},
-};
+        }}
+});

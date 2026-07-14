@@ -415,9 +415,17 @@ function initializeApp() {
 
     window.galleryData = {}; // 重置为空对象，作为合并的基座
 
-    // 1. 兼容老版本：如果页面还引入了旧的单文件 setting.js
+    // 1. 兼容旧版单文件配置：支持对象或数组形式
     if (window.gallerySettings) {
-        deepMergeConfigs(window.galleryData, window.gallerySettings);
+        const gallerySettingsList = Array.isArray(window.gallerySettings)
+            ? window.gallerySettings
+            : [window.gallerySettings];
+
+        gallerySettingsList.forEach(config => {
+            if (config) {
+                deepMergeConfigs(window.galleryData, config);
+            }
+        });
     }
 
     // 2. 支持新版本：遍历并合并所有通过新生成器导出的配置文件
