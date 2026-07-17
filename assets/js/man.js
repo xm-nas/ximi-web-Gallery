@@ -286,27 +286,25 @@ function renderNextChunk() {
     const baseIndex = window.currentRenderedChunk * 30;
     
     // 如果处于瀑布流模式，赋予响应式断点类名
-    // const itemClasses = isWaterfallMode 
-    //     ? "media-item w-6/12 sm:w-4/12 lg:w-3/12 xl:w-1/5 2xl:w-2/12 ajax-post in-load in-loaded p-2" 
-    //     : "media-item ajax-post in-load in-loaded";
     const itemClasses = isWaterfallMode 
         ? "media-item w-6/12 sm:w-4/12 lg:w-3/12 ajax-post in-load in-loaded p-2" 
         : "media-item ajax-post in-load in-loaded";
 
-chunkData.forEach((media, index) => {
+    // 用于收集需要在 DOM 挂载后执行的视频初始化任务
+    const videoInitTasks = [];
+
+    chunkData.forEach((media, index) => {
         const globalIndex = baseIndex + index;
         const fullName = media.split('/').pop().split('\\').pop();
        
-        // const encodedPath = media.replace(/\\/g, '/').split('/').map(segment => encodeURIComponent(segment)).join('/');
-       // 修改后
-let encodedPath;
-if (media.toLowerCase().startsWith('http')) {
-    // 如果是网络链接，直接使用，不需要进行分段转码，防止协议头被破坏
-    encodedPath = media; 
-} else {
-    // 如果是本地路径，保持原有的编码逻辑
-    encodedPath = media.replace(/\\/g, '/').split('/').map(segment => encodeURIComponent(segment)).join('/');
-}
+        let encodedPath;
+        if (media.toLowerCase().startsWith('http')) {
+            // 如果是网络链接，直接使用，不需要进行分段转码，防止协议头被破坏
+            encodedPath = media; 
+        } else {
+            // 如果是本地路径，保持原有的编码逻辑
+            encodedPath = media.replace(/\\/g, '/').split('/').map(segment => encodeURIComponent(segment)).join('/');
+        }
 
         const ext = media.split('.').pop().toLowerCase();
         const isVideo = videoExts.includes(ext);
@@ -334,25 +332,63 @@ if (media.toLowerCase().startsWith('http')) {
                 </div>
             `;
         } else {
+            const vidId = `artplayer-${globalIndex}`;
             htmlStr += `
                 <div class="${itemClasses}" id="media-vid-${globalIndex}">
                     <figure style="margin:0; width: 100%;">
                         <div class="media-wrapper">
                             <div class="tg-spinner" id="spinner-${globalIndex}"></div>
-                            <video class="lazy-image blur-load" src="${encodedPath}" title="${fullName}" controls preload="metadata" 
-                                   onloadeddata="
-                                      this.style.minHeight='auto'; 
-                                      this.classList.remove('lazy-image', 'blur-load'); 
-                                      this.classList.add('blur-loaded'); 
-                                      const sp = document.getElementById('spinner-${globalIndex}'); if(sp) sp.remove(); 
-                                      if(window.myMasonry) window.myMasonry.layout();
-                                   " 
-                                   style="width:100%; height:auto; display:block;"></video>
+                            <div id="${vidId}" class="shadow-md rounded-sm" style="width:100%; aspect-ratio: 16/9; background:#000;"></div>
                         </div>
                         <div class="media-caption">${fullName}</div>
                     </figure>
                 </div>
             `;
+
+            // 收集视频初始化任务，推迟到 DOM 拼接完成后执行
+            videoInitTasks.push(() => {
+                const art = new Artplayer({
+                    container: `#${vidId}`,
+                    url: encodedPath,
+                    title: fullName,
+                    volume: 0.5,
+                    isLive: false,
+                    muted: false,
+                    autoplay: false,
+                    pip: true,
+                    screenshot: true,
+                    setting: true,
+                    loop: true,
+                    flip: true,
+                    playbackRate: true,
+                    aspectRatio: true,
+                    fullscreen: true,
+                    fullscreenWeb: true,
+                    lang: 'zh-cn', // ★ 核心修复：强制设置为简体中文
+                });
+                
+                // 监听视频加载完成，动态读取视频真实宽高并重置比例
+                art.on('ready', () => {
+                    const video = art.video;
+                    if (video && video.videoWidth && video.videoHeight) {
+                        const container = document.getElementById(vidId);
+                        if (container) {
+                            // 1. 动态修正容器的宽高比（支持横屏和竖屏）
+                            container.style.aspectRatio = `${video.videoWidth}/${video.videoHeight}`;
+                            // ★ 删除了错误的 art.resize() 调用，CSS的宽高比配合Masonry已经足够响应
+                        }
+                    }
+                    
+                    // 2. 移除加载动画
+                    const sp = document.getElementById(`spinner-${globalIndex}`);
+                    if(sp) sp.remove();
+                    
+                    // 3. 核心：视频高度变化后，必须重新触发瀑布流排版，防止布局重叠或白边
+                    if(window.myMasonry) {
+                        window.myMasonry.layout();
+                    }
+                });
+            });
         }
     });
         
@@ -361,6 +397,9 @@ if (media.toLowerCase().startsWith('http')) {
     tempDiv.innerHTML = htmlStr;
     const newElements = Array.from(tempDiv.children);
     newElements.forEach(el => grid.appendChild(el));
+
+    // 安全执行所有的 ArtPlayer 初始化任务
+    videoInitTasks.forEach(task => task());
 
     // 通知 Masonry 处理追加的节点并排版
     if (isWaterfallMode) {
@@ -382,7 +421,6 @@ if (media.toLowerCase().startsWith('http')) {
     // 块索引自增
     window.currentRenderedChunk++;
 }
-
 
 window.galleryData = window.galleryData || {};
 
@@ -648,3 +686,4 @@ function deepMergeConfigs(target, source) {
     }
     return target;
 }
+
