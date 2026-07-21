@@ -1,9 +1,236 @@
+<?php
+// 1. 强制设定 Session 仅在浏览器当前会话有效，并且禁止被 JavaScript 窃取
+session_set_cookie_params(0, '/', '', false, true);
+
+// 2. 开启 Session
+session_start();
+
+// 3. 强制禁用浏览器缓存
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+header("Expires: 0");
+
+// ================= 配置区 =================
+$pass = "ximi123456"; // 存储的密码变量
+$guest = 1;        // 访客开放权限变量 (1: 直接访问, 0: 需要密码)
+$timeout = 3600;   // 闲置超时时间（秒）。1800秒 = 30分钟无操作自动退出登录
+
+// ================= 彻底退出登录逻辑 =================
+if (isset($_GET['logout'])) {
+    $_SESSION = array();
+    if (ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000,
+            $params["path"], $params["domain"],
+            $params["secure"], $params["httponly"]
+        );
+    }
+    session_destroy();
+    header("Location: " . strtok($_SERVER["REQUEST_URI"], '?'));
+    exit;
+}
+
+// ================= 超时自动退出逻辑 =================
+// 检查是否已经登录过，并且判断最后一次活动时间是否超过了设定的 $timeout
+if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeout)) {
+        // 超时了，销毁 Session 并刷新页面重新拦截
+        session_unset();
+        session_destroy();
+        header("Location: " . $_SERVER['REQUEST_URI']);
+        exit;
+    }
+    // 如果没有超时（比如刚才刷新了页面），则更新最后活动时间，重新计时
+    $_SESSION['last_activity'] = time();
+}
+// ==================================================
+
+$error_msg = "";
+
+// 判断逻辑：如果访客权限关闭 (0) 且当前未验证通过
+if ($guest == 0 && empty($_SESSION['is_logged_in'])) {
+    
+    // 检查是否有表单提交
+    if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['password'])) {
+        if ($_POST['password'] === $pass) {
+            // 密码正确，记录状态并记录当前时间
+            $_SESSION['is_logged_in'] = true;
+            $_SESSION['last_activity'] = time();
+            header("Location: " . $_SERVER['REQUEST_URI']);
+            exit;
+        } else {
+            $error_msg = "密码错误";
+        }
+    }
+    
+    // --- 下面是 Mac 风格登录界面的 HTML 与 CSS ---
+?>
+    <!DOCTYPE html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>需要登录</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                /* Mac 系统默认字体 */
+                font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+                /* macOS 风格的高清壁纸背景 */
+                background: url('https://nas.hhqq.net/icon/background.webp') no-repeat center center fixed;
+                background-size: cover;
+            }
+            .login-box {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 40px 60px;
+                /* Mac 毛玻璃效果 */
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(25px);
+                -webkit-backdrop-filter: blur(25px);
+                border-radius: 18px;
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            .avatar {
+                width: 80px;
+                height: 80px;
+                background-color: rgba(255, 255, 255, 0.25);
+                border-radius: 50%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin-bottom: 15px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            }
+            /* 默认用户头像 SVG */
+            .avatar svg {
+                width: 45px;
+                height: 45px;
+                fill: rgba(255, 255, 255, 0.85);
+            }
+            .username {
+                color: #ffffff;
+                font-size: 22px;
+                font-weight: 500;
+                margin-bottom: 25px;
+                text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+                letter-spacing: 0.5px;
+            }
+            .input-wrapper {
+                position: relative;
+                display: flex;
+                align-items: center;
+                /* 密码错误时的晃动动画 */
+                animation: <?php echo $error_msg ? 'shake 0.4s ease-in-out' : 'none'; ?>;
+            }
+            .pass-input {
+                width: 170px;
+                height: 34px;
+                border-radius: 17px;
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                background: rgba(255, 255, 255, 0.2);
+                padding: 0 35px 0 16px;
+                color: #ffffff;
+                font-size: 14px;
+                outline: none;
+                transition: all 0.3s;
+                backdrop-filter: blur(10px);
+            }
+            .pass-input::placeholder {
+                color: rgba(255, 255, 255, 0.7);
+            }
+            .pass-input:focus {
+                background: rgba(255, 255, 255, 0.35);
+                border-color: rgba(255, 255, 255, 0.6);
+            }
+            .submit-btn {
+                position: absolute;
+                right: 5px;
+                width: 26px;
+                height: 26px;
+                border-radius: 50%;
+                background: transparent;
+                border: none;
+                color: #fff;
+                cursor: pointer;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                transition: background 0.2s;
+            }
+            .submit-btn:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
+            .submit-btn svg {
+                width: 14px;
+                height: 14px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2.5;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .error-text {
+                color: #ff7675;
+                font-size: 13px;
+                margin-top: 10px;
+                height: 15px;
+                font-weight: 500;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            }
+            /* 错误提示的抖动效果 */
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-6px); }
+                50% { transform: translateX(6px); }
+                75% { transform: translateX(-6px); }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="login-box">
+            <div class="avatar">
+                <!-- Mac默认用户剪影 -->
+                <img src="https://nas.hhqq.net/icon/logo.webp" style="
+    width: 66px;
+    height: 66px;
+    margin-top: 7px;
+">
+            </div>
+            <div class="username">Admin</div>
+            <form method="POST" action="">
+                <div class="input-wrapper">
+                    <input type="password" name="password" class="pass-input" placeholder="输入密码" autofocus required>
+                    <!-- Mac 风格的提交箭头 -->
+                    <button type="submit" class="submit-btn">
+                        <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </button>
+                </div>
+            </form>
+            <div class="error-text"><?php echo $error_msg; ?></div>
+        </div>
+    </body>
+    </html>
+    <?php
+    // 【重要】exit 能阻止页面向下继续执行，从而保护了你原本的 HTML 代码不被暴露
+    exit; 
+}
+?>
+
 <!-- 
 		发布地址：https://www.ximi.me/post-6044.html
-		版本：v1.07
+		版本：v1.06
         作者：希米
         说明：本地图库，支持目录树浏览，原生体验,Telegraph风格，macOS化UI，支持移动端浏览。
-		更新时间：2036-07-21
+		更新时间：2036-07-14
 -->
         
 <html lang="zh-CN"><head>
@@ -16,8 +243,8 @@
 
 <link rel="shortcut icon" href="./assets/img/favicon.png" type="image/png" 
       onerror="this.onerror=null; this.href='https://www.ximi.me/usr/demo/ximi-img/assets/img/favicon.png';">
-<!-- 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css">
+
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css">
 <script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script> -->
 
 <script>
@@ -39,6 +266,7 @@ const jsResources = [
     { local: './assets/js/artplayer.js', remote: 'https://cdn.jsdelivr.net/npm/artplayer/dist/artplayer.js', defer: true },
     { local: './assets/js/APlayer.min.js', remote: 'https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js', defer: true }       
 ];
+
     // 2. CSS 加载函数 (并行执行)
     cssResources.forEach(res => {
         const link = document.createElement('link');
@@ -98,12 +326,13 @@ const jsResources = [
 
 
  <!-- 引入 配置文件 -->
-<script src="api.js"></script> 
  <script src="setting.js"></script> 
+
+
 
 <!-- 根据需求自行添加即可
 
-
+<script src="api.js"></script> 
 
 
 -->
@@ -171,7 +400,7 @@ const jsResources = [
 <!-- 添加到容器底部的内容 -->
     <div class="sidebar-footer">
         <p class="copyright">© 2026 [<a href="https://www.ximi.me/post-6044.html" target="_blank">ximi</a>] All Rights Reserved.</p>
- <p class="copyright">version：v1.07</p> 
+ <p class="copyright">version：v1.06</p> 
         
         <p class="github-link">
             <a href="https://github.com/xm-nas/ximi-web-Gallery" target="_blank" rel="noopener noreferrer">
@@ -308,7 +537,6 @@ const jsResources = [
 
     <img class="lightbox-img" id="lightboxImg" src="" alt="preview" onclick="event.stopPropagation()" ondblclick="toggleLightboxZoom(event)">
 </div>
-
 
 
 <style> 
