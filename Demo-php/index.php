@@ -1,0 +1,693 @@
+<?php
+// 1. 强制设定 Session 仅在浏览器当前会话有效，并且禁止被 JavaScript 窃取
+session_set_cookie_params(0, '/', '', false, true);
+
+// 2. 开启 Session
+session_start();
+
+// 3. 强制禁用浏览器缓存
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+header("Expires: 0");
+
+// ================= 配置区 =================
+$pass = "ximi123456"; // 存储的密码变量
+$guest = 1;        // 访客开放权限变量 (1: 直接访问, 0: 需要密码)
+$timeout = 3600;   // 闲置超时时间（秒）。1800秒 = 30分钟无操作自动退出登录
+
+// ================= 彻底退出登录逻辑 =================
+if (isset($_GET['logout'])) {
+    $_SESSION = array();
+    if (ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000,
+            $params["path"], $params["domain"],
+            $params["secure"], $params["httponly"]
+        );
+    }
+    session_destroy();
+    header("Location: " . strtok($_SERVER["REQUEST_URI"], '?'));
+    exit;
+}
+
+// ================= 超时自动退出逻辑 =================
+// 检查是否已经登录过，并且判断最后一次活动时间是否超过了设定的 $timeout
+if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeout)) {
+        // 超时了，销毁 Session 并刷新页面重新拦截
+        session_unset();
+        session_destroy();
+        header("Location: " . $_SERVER['REQUEST_URI']);
+        exit;
+    }
+    // 如果没有超时（比如刚才刷新了页面），则更新最后活动时间，重新计时
+    $_SESSION['last_activity'] = time();
+}
+// ==================================================
+
+$error_msg = "";
+
+// 判断逻辑：如果访客权限关闭 (0) 且当前未验证通过
+if ($guest == 0 && empty($_SESSION['is_logged_in'])) {
+    
+    // 检查是否有表单提交
+    if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['password'])) {
+        if ($_POST['password'] === $pass) {
+            // 密码正确，记录状态并记录当前时间
+            $_SESSION['is_logged_in'] = true;
+            $_SESSION['last_activity'] = time();
+            header("Location: " . $_SERVER['REQUEST_URI']);
+            exit;
+        } else {
+            $error_msg = "密码错误";
+        }
+    }
+    
+    // --- 下面是 Mac 风格登录界面的 HTML 与 CSS ---
+?>
+    <!DOCTYPE html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>需要登录</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                /* Mac 系统默认字体 */
+                font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+                /* macOS 风格的高清壁纸背景 */
+                background: url('https://nas.hhqq.net/icon/background.webp') no-repeat center center fixed;
+                background-size: cover;
+            }
+            .login-box {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 40px 60px;
+                /* Mac 毛玻璃效果 */
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(25px);
+                -webkit-backdrop-filter: blur(25px);
+                border-radius: 18px;
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            .avatar {
+                width: 80px;
+                height: 80px;
+                background-color: rgba(255, 255, 255, 0.25);
+                border-radius: 50%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin-bottom: 15px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            }
+            /* 默认用户头像 SVG */
+            .avatar svg {
+                width: 45px;
+                height: 45px;
+                fill: rgba(255, 255, 255, 0.85);
+            }
+            .username {
+                color: #ffffff;
+                font-size: 22px;
+                font-weight: 500;
+                margin-bottom: 25px;
+                text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+                letter-spacing: 0.5px;
+            }
+            .input-wrapper {
+                position: relative;
+                display: flex;
+                align-items: center;
+                /* 密码错误时的晃动动画 */
+                animation: <?php echo $error_msg ? 'shake 0.4s ease-in-out' : 'none'; ?>;
+            }
+            .pass-input {
+                width: 170px;
+                height: 34px;
+                border-radius: 17px;
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                background: rgba(255, 255, 255, 0.2);
+                padding: 0 35px 0 16px;
+                color: #ffffff;
+                font-size: 14px;
+                outline: none;
+                transition: all 0.3s;
+                backdrop-filter: blur(10px);
+            }
+            .pass-input::placeholder {
+                color: rgba(255, 255, 255, 0.7);
+            }
+            .pass-input:focus {
+                background: rgba(255, 255, 255, 0.35);
+                border-color: rgba(255, 255, 255, 0.6);
+            }
+            .submit-btn {
+                position: absolute;
+                right: 5px;
+                width: 26px;
+                height: 26px;
+                border-radius: 50%;
+                background: transparent;
+                border: none;
+                color: #fff;
+                cursor: pointer;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                transition: background 0.2s;
+            }
+            .submit-btn:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
+            .submit-btn svg {
+                width: 14px;
+                height: 14px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2.5;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .error-text {
+                color: #ff7675;
+                font-size: 13px;
+                margin-top: 10px;
+                height: 15px;
+                font-weight: 500;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            }
+            /* 错误提示的抖动效果 */
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-6px); }
+                50% { transform: translateX(6px); }
+                75% { transform: translateX(-6px); }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="login-box">
+            <div class="avatar">
+                <!-- Mac默认用户剪影 -->
+                <img src="https://nas.hhqq.net/icon/logo.webp" style="
+    width: 66px;
+    height: 66px;
+    margin-top: 7px;
+">
+            </div>
+            <div class="username">Admin</div>
+            <form method="POST" action="">
+                <div class="input-wrapper">
+                    <input type="password" name="password" class="pass-input" placeholder="输入密码" autofocus required>
+                    <!-- Mac 风格的提交箭头 -->
+                    <button type="submit" class="submit-btn">
+                        <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </button>
+                </div>
+            </form>
+            <div class="error-text"><?php echo $error_msg; ?></div>
+        </div>
+    </body>
+    </html>
+    <?php
+    // 【重要】exit 能阻止页面向下继续执行，从而保护了你原本的 HTML 代码不被暴露
+    exit; 
+}
+?>
+
+<!-- 
+		发布地址：https://www.ximi.me/post-6044.html
+		版本：v1.06
+        作者：希米
+        说明：本地图库，支持目录树浏览，原生体验,Telegraph风格，macOS化UI，支持移动端浏览。
+		更新时间：2036-07-14
+-->
+        
+<html lang="zh-CN"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ximi Station</title>
+
+<link rel="icon" href="./assets/img/favicon.png" type="image/png" 
+      onerror="this.onerror=null; this.href='https://www.ximi.me/usr/demo/ximi-img/assets/img/favicon.png';">
+
+<link rel="shortcut icon" href="./assets/img/favicon.png" type="image/png" 
+      onerror="this.onerror=null; this.href='https://www.ximi.me/usr/demo/ximi-img/assets/img/favicon.png';">
+
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css">
+<script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script> -->
+
+<script>
+(function() {
+    console.log("【资源加载器】启动中...");
+
+    // 1. 资源配置清单
+    const cssResources = [
+        { local: './assets/css/tailwind.min.css', remote: 'https://www.ximi.me/usr/demo/ximi-img/assets/css/tailwind.min.css' },
+        { local: './assets/css/man.css', remote: 'https://www.ximi.me/usr/demo/ximi-img/assets/css/man.css' },
+        { local: './assets/css/APlayer.min.css', remote: 'https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css' }
+    ];
+
+// 正确的 JavaScript 对象格式
+const jsResources = [
+    { local: './assets/js/masonry.pkgd.min.js', remote: 'https://www.ximi.me/usr/demo/ximi-img/assets/js/masonry.pkgd.min.js', defer: true },
+    { local: './assets/js/imagesloaded.pkgd.min.js', remote: 'https://www.ximi.me/usr/demo/ximi-img/assets/js/imagesloaded.pkgd.min.js', defer: true },
+    { local: './assets/js/man.js', remote: 'https://www.ximi.me/usr/demo/ximi-img/assets/js/man.js', defer: true },
+    { local: './assets/js/artplayer.js', remote: 'https://cdn.jsdelivr.net/npm/artplayer/dist/artplayer.js', defer: true },
+    { local: './assets/js/APlayer.min.js', remote: 'https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js', defer: true }       
+];
+
+    // 2. CSS 加载函数 (并行执行)
+    cssResources.forEach(res => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = res.local;
+        link.onerror = function() {
+            console.warn('CSS 本地加载失败，切换 CDN:', res.local);
+            this.href = res.remote;
+        };
+        document.head.appendChild(link);
+    });
+
+    // 3. JS 加载函数 (队列递归执行，确保依赖顺序)
+    function loadJsQueue(index) {
+        if (index >= jsResources.length) {
+            console.log("【资源加载器】所有 JS 加载序列处理完毕。");
+            return;
+        }
+
+        const res = jsResources[index];
+        const script = document.createElement('script');
+        script.src = res.local;
+
+        // 成功时处理：加载下一个
+        script.onload = () => {
+            console.log('JS 加载成功:', res.local);
+            loadJsQueue(index + 1);
+        };
+
+        // 本地加载失败时：尝试远程
+        script.onerror = () => {
+            console.warn('JS 本地加载失败，尝试远程:', res.local);
+            const remoteScript = document.createElement('script');
+            remoteScript.src = res.remote;
+            
+            // 远程成功时：继续加载下一个
+            remoteScript.onload = () => {
+                console.log('JS 远程加载成功:', res.remote);
+                loadJsQueue(index + 1);
+            };
+            
+            // 远程也失败时：跳过当前，继续尝试加载下一个
+            remoteScript.onerror = () => {
+                console.error('JS 远程加载也失败了，跳过:', res.remote);
+                loadJsQueue(index + 1);
+            };
+            document.head.appendChild(remoteScript);
+        };
+
+        document.head.appendChild(script);
+    }
+
+    // 执行
+    loadJsQueue(0);
+})();
+</script>
+
+
+ <!-- 引入 配置文件 -->
+ <script src="setting.js"></script> 
+
+<script src="api.js"></script> 
+
+<!-- 根据需求自行添加即可
+
+
+
+
+-->
+
+<style></style>
+
+</head>
+
+<body>
+
+<button class="toggle-btn" id="sidebarToggle" aria-label="Toggle Sidebar">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+</button>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<aside class="sidebar" id="sidebar">
+
+<div class="sidebar-header">
+        <div class="sidebar-brand" style="
+    padding: 40px 15px 25px 22px;
+">
+            <div class="brand-icon" style="
+    width: 60px;
+    height: 60px;
+    padding-top: 4px;
+    background: linear-gradient(135deg, #dfdfe500, #ceceeb75);
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 2px 8px rgb(11 132 255 / 45%);
+">
+            <img src="./assets/img/logo.png" 
+     style="width: 50px; height: 50px;" 
+     alt="Logo"
+     onerror="this.onerror=null; this.src='https://www.ximi.me/usr/demo/ximi-img/assets/img/favicon.png';">
+                </div>
+            <div class="brand-title">Ximi Station</div>
+        </div>
+
+        <div class="sidebar-actions">
+            <label class="btn-update">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="settings" aria-hidden="true" class="lucide lucide-settings"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                               <span>图库配置</span>
+                <input type="file" webkitdirectory="" multiple="" onchange="handleFolderSelect(event)">
+            </label>
+            
+            <button class="btn-update" id="btnToggleMode" onclick="toggleViewMode()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
+                <span id="modeText">平铺模式</span>
+            </button>
+        </div>
+        
+        <div class="sidebar-section-title">媒体中心</div>
+    </div>
+
+    <ul class="tree-menu" id="sidebarMenu"><li class="folder-open"><div class="tree-item"><span class="folder-icon">▶</span> <span style="word-break: break-all;">古风</span></div><ul><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">捻发作须</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">湖畔闲思</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">丐帮女侠</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">金风玉露</span></div></li></ul></li><li class="folder-open"><div class="tree-item"><span class="folder-icon">▶</span> <span style="word-break: break-all;">美图</span></div><ul><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">年年 - 花野</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">年年 - 绿茵</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">年年 - 城</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">桜桃喵 - 盏月</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">桜桃喵 - 夜纱</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">年年 风</span></div></li><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">年年 - 琳妮特</span></div></li></ul></li><li class="folder-open"><div class="tree-item"><span class="folder-icon">▶</span> <span style="word-break: break-all;">壁纸</span></div><ul><li><div class="tree-item"><span class="folder-icon">•</span> <span style="word-break: break-all;">小清新</span></div></li><li><div class="tree-item active"><span class="folder-icon">•</span> <span style="word-break: break-all;">春日私语</span></div></li></ul></li></ul>
+
+<!-- 添加到容器底部的内容 -->
+    <div class="sidebar-footer">
+        <p class="copyright">© 2026 [<a href="https://www.ximi.me/post-6044.html" target="_blank">ximi</a>] All Rights Reserved.</p>
+ <p class="copyright">version：v1.06</p> 
+        
+        <p class="github-link">
+            <a href="https://github.com/xm-nas/ximi-web-Gallery" target="_blank" rel="noopener noreferrer">
+                <!-- 可选：添加一个 GitHub 图标 -->
+                <i class="fab fa-github"></i> GitHub
+            </a>
+        </p>
+    </div>
+
+
+
+</aside>
+
+<!-- main -->
+<main class="main-content" style="background-color: #f5f5f7; display: flex; align-items: flex-start; justify-content: center; ">
+       <div class="tl-article">
+<header>
+            <h1 id="galleryTitle" style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 32px;"></span> 
+            </h1>
+            <div class="tl-meta" id="galleryMeta">
+                <span class="author"></span>
+                <span class="divider">·</span>
+                <time></time>
+            </div>
+            
+            <div id="videoDropdownContainer" style="display: none; margin-top: 16px;">
+                <select id="videoSelect" onchange="if(this.value) document.getElementById(this.value).scrollIntoView({behavior: 'smooth', block: 'center'})" style="padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.1); background: #fbfbfd; font-size: 13px; color: #1d1d1f; outline: none; cursor: pointer; max-width: 100%; box-shadow: 0 1px 2px rgba(0,0,0,0.03); font-family: inherit;">
+                    <option value="">快速跳转到视频...</option>
+                </select>
+            </div>
+        </header>
+
+        <div class="tl-content" id="galleryContent"> 
+
+<!-- 新增：嵌入到 tl-content 内的音乐播放器卡片容器 -->
+    <div id="aplayer-container" style="display: none; margin-bottom: 28px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.08); background: #ffffff;">
+        <div id="aplayer"></div>
+    </div>
+
+
+<!--分割  -->
+
+
+
+
+
+
+
+    <!-- macOS 窗口主容器 -->
+    <div style="width: 100%; max-width: 540px; background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.08); overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;">
+
+        <!-- 顶部 Title Bar (红黄绿按钮) -->
+        <div style="height: 40px; background: rgba(246, 246, 246, 0.5); border-bottom: 1px solid rgba(0,0,0,0.06); display: flex; align-items: center; padding: 0 16px; position: relative;">
+            <div style="display: flex; gap: 8px;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background: #FF5F56; border: 1px solid #E0443E;"></div>
+                <div style="width: 12px; height: 12px; border-radius: 50%; background: #FFBD2E; border: 1px solid #DEA123;"></div>
+                <div style="width: 12px; height: 12px; border-radius: 50%; background: #27C93F; border: 1px solid #1AAB29;"></div>
+            </div>
+            <div style="position: absolute; left: 50%; transform: translateX(-50%); font-size: 13px; font-weight: 600; color: #4a4a4a; user-select: none;">
+                设置助理
+            </div>
+        </div>
+
+        <!-- 内容区域 -->
+        <div style="padding: 36px 40px 44px 40px;">
+            <h1 style="font-size: 26px; font-weight: 700; margin: 0 0 6px 0; color: #1d1d1f; letter-spacing: -0.4px;">欢迎使用本地图库</h1>
+            <p style="font-size: 14px; color: #86868b; margin: 0 0 32px 0; line-height: 1.5;">只需完成基础配置，即可在本地以原生体验浏览你的相册。</p>
+
+            <!-- 步骤列表 -->
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+
+                <!-- Step 1 -->
+                <div style="display: flex; gap: 16px;">
+                    <div style="width: 28px; height: 28px; border-radius: 50%; background: #e8f2ff; color: #007aff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0;">1</div>
+                    <div>
+                        <div style="font-size: 15px; font-weight: 600; color: #1d1d1f; margin-bottom: 2px;">选择图片目录</div>
+                        <div style="font-size: 13px; color: #515154; line-height: 1.5;">
+                            点击左侧边栏的 <span style="display: inline-block; background: #ffffff; border: 1px solid rgba(0,0,0,0.1); border-radius: 5px; padding: 1px 6px; font-size: 11px; font-weight: 500; color: #1d1d1f; box-shadow: 0 1px 1px rgba(0,0,0,0.03); margin: 0 2px;">更新图库配置</span>，选中网页当前目录内存储图片的文件夹。
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div style="display: flex; gap: 16px;">
+                    <div style="width: 28px; height: 28px; border-radius: 50%; background: #e8f2ff; color: #007aff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0;">2</div>
+                    <div>
+                        <div style="font-size: 15px; font-weight: 600; color: #1d1d1f; margin-bottom: 2px;">保存配置文件</div>
+                        <div style="font-size: 13px; color: #515154; line-height: 1.5;">
+                            浏览器会自动扫描目录内(包含子目录)所有图片并下载 <code style="font-family: ui-monospace, SFMono-Regular, Consolas, monospace; background: rgba(0,0,0,0.05); padding: 1px 5px; border-radius: 4px; font-size: 12px; color: #d03050;">setting.js</code> 数据文件。
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div style="display: flex; gap: 16px;">
+                    <div style="width: 28px; height: 28px; border-radius: 50%; background: #e8f2ff; color: #007aff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0;">3</div>
+                    <div>
+                        <div style="font-size: 15px; font-weight: 600; color: #1d1d1f; margin-bottom: 2px;">保存或替换并刷新</div>
+                        <div style="font-size: 13px; color: #515154; line-height: 1.5;">
+                            将该配置移动到本网页所在目录，按 <span style="display: inline-block; background: #ffffff; border: 1px solid rgba(0,0,0,0.15); border-radius: 4px; padding: 1px 5px; font-size: 11px; font-weight: 600; color: #1d1d1f; box-shadow: 0 1px 0px rgba(0,0,0,0.05); border-bottom-width: 2px;">F5</span> 或 <span style="display: inline-block; background: #ffffff; border: 1px solid rgba(0,0,0,0.15); border-radius: 4px; padding: 1px 5px; font-size: 11px; font-weight: 600; color: #1d1d1f; box-shadow: 0 1px 0px rgba(0,0,0,0.05); border-bottom-width: 2px;">⌘ R</span> 刷新即可。
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- 底部提示信息 -->
+            <div style="margin-top: 36px; padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.06); display: flex; align-items: flex-start; gap: 8px; color: #86868b; font-size: 12px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #007aff; margin-top: 2px; flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <span style="line-height: 1.5;">在左侧选择相册后，此向导会自动关闭。配置好后，未来双击打开网页即可直接看图，无需重复操作。</span>
+            </div>
+        </div>
+    </div>
+ </div>
+    </div>
+</main>
+
+<div class="lightbox-overlay" id="lightboxOverlay" onclick="closeLightbox()">
+    <div class="lightbox-close">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+    </div>
+    
+    <button class="lightbox-btn prev" onclick="prevLightboxImage(event)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    
+    <button class="lightbox-btn next" onclick="nextLightboxImage(event)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+
+    <img class="lightbox-img" id="lightboxImg" src="" alt="preview" onclick="event.stopPropagation()" ondblclick="toggleLightboxZoom(event)">
+</div>
+
+
+<style> 
+
+.aplayer {
+    background: transparent !important;
+    box-shadow: none !important;
+    margin: 5px !important;
+        min-height: 350px;
+}
+
+#aplayer-container {
+    border-radius: 5px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    margin-bottom: 24px;
+    clear: both;
+    overflow: hidden;
+}
+
+.aplayer .aplayer-list ol li {
+    border-top: none !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    padding: 10px 10px !important;
+    height: 20px;
+    transition: background 0.2s ease;
+    line-height: 20px;
+    position: relative;
+}
+
+.aplayer .aplayer-list ol li .aplayer-list-cur {
+    display: none;
+    width: 0px;
+    height: 42px;
+    position: absolute;
+    left: 0;
+    top: 5px;
+    cursor: pointer;
+}
+
+.aplayer-pic {
+    border-radius: 2px !important;
+    margin: 0;
+    height: 72px !important;
+    width: 72px !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    background-color: #f5f5f5;
+}
+
+
+.aplayer .aplayer-info .aplayer-controller .aplayer-time {
+    position: relative;
+    right: -12px;
+    bottom: 7px;
+    height: 14px;
+    color: #999;
+    font-size: 14px;
+    padding-left: 0px;
+}
+
+.aplayer-pic {
+    background-image: url(./assets/img/Cover.png);
+}
+.aplayer {
+    background: #f5f5f7e0 !important;
+    box-shadow: none !important;
+    margin: 5px !important;
+}
+.aplayer .aplayer-body {
+    position: relative;
+    background: #0b84ff2e;
+    height: 90px;
+}
+
+.aplayer.aplayer-withlist .aplayer-list {
+    display: block;
+    margin-left: 75px;
+    background: #eeeef100;
+}
+
+/* 终极高权重选择器：body + 外层ID + 播放器Class + 歌词容器 + p标签 */
+body #aplayer-container .aplayer .aplayer-lrc p {
+    font-size: 14px !important;
+    color: #494747 !important;
+    text-shadow: none !important;
+    transition: all 0.3s ease !important;
+    line-height: 26px !important;
+    height: 26px !important;
+    margin: 0 !important;
+    padding: 1px 0 !important; /* 修复了你原有代码中重复的 padding */
+    opacity: 0.6 !important;   /* 修复了你原有代码中重复的 opacity，并加上 !important */
+    overflow: hidden !important;
+}
+
+/* 必须同时配置高亮当前句的样式，否则会被上面的代码全覆盖 */
+body #aplayer-container .aplayer .aplayer-lrc p.aplayer-lrc-current {
+    color: #0A84FF !important; /* 你的高亮主题色 */
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    opacity: 1 !important;
+    transform: scale(1.05) !important;
+}
+
+.custom-aplayer-tabs button.active {
+    background: #0A84FF;
+    color: #fffafd !important;
+    border-color: #0A84FF;
+    box-shadow: 0 4px 10px rgba(10, 132, 255, 0.3);
+}
+.custom-aplayer-tabs button {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    /* background: rgba(0, 0, 0, 0.03) !important; */
+    /* border: 1px solid rgba(0, 0, 0, 0.05) !important; */
+    /* border-radius: 2px !important; */
+    padding: 8px 0 !important;
+    font-size: 13px !important;
+    color: #939192 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    font-weight: 500 !important;
+    box-sizing: border-box !important;
+    line-height: normal !important;
+}
+
+.custom-aplayer-tabs {
+    position: absolute;
+    left: 0px;
+    top: 97px;
+    width: 90px;
+    height: 100%;
+    background: #b8d5ff1f;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 20;
+}
+.custom-aplayer-tabs button svg {
+    width: 14px !important;
+    height: 14px !important;
+    stroke: currentColor !important;
+    flex-shrink: 0;
+}
+
+</style>
+
+</body>
+</html>

@@ -1,0 +1,688 @@
+
+/* ================== Base & Typography ================== */
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: #fff;
+    color: #212121;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 18px;
+    line-height: 1.58;
+    -webkit-font-smoothing: antialiased;
+}
+
+header { margin-bottom: 35px; }
+
+/* ================== Floating Toggle Button ================== */
+.toggle-btn {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+    color: #333;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggle-btn:hover {
+    background: #f8f9fa;
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+
+/* ================== Sidebar & Overlay ================== */
+.sidebar-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.2);
+    backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+    z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.show { opacity: 1; pointer-events: auto; }
+
+.sidebar {
+    width: 250px; /* Mac 侧栏通常偏窄 */
+    background-color: rgba(235, 235, 239, 0.85); /* macOS 侧边栏经典底色 */
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border-right: 1px solid rgba(0,0,0,0.06);
+    display: flex; flex-direction: column; overflow-y: auto;
+    /* transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1); */
+    z-index: 1000; flex-shrink: 0;
+}
+
+.sidebar-header {     padding: 15px 15px 0 15px;}
+
+/* 重新设计的配置按钮：Mac 辅助按钮风格 */
+.btn-update {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; padding: 7px;
+    background: #ffffff; color: #1d1d1f;
+    border: 1px solid rgba(0,0,0,0.1); border-radius: 6px;
+    cursor: pointer; font-size: 13px; font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.btn-update:hover { 
+    background: #fbfbfb; 
+    border-color: rgba(0,0,0,0.15); 
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06); 
+}
+.btn-update input { display: none; }
+
+/* 目录树 macOS 化：更小的字号，紧凑的行高 */
+.tree-menu { 
+    padding: 0px 15px 80px 15px; margin: 0; list-style: none; 
+    font-size: 13px; 
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; 
+}
+.tree-menu ul { list-style: none; padding-left: 20px; margin: 0; display: none; }
+.tree-menu li { margin: 2px 0; }
+
+.tree-item {
+    display: flex; align-items: center;
+    padding: 6px 10px; margin: 0 12px;
+    border-radius: 6px; cursor: pointer; user-select: none;
+    color: #1d1d1f; transition: background 0.1s, color 0.1s;
+}
+
+.tree-item:hover { background-color: rgba(0,0,0,0.06); }
+
+/* Mac 经典的蓝底白字选中态 */
+.tree-item.active { 
+    background-color: rgba(0, 0, 0, 0.08); /* 极淡的黑色覆盖，体现毛玻璃质感 */
+    color: #000;                           /* 纯黑色字体，提升清晰度 */
+    font-weight: 600;                      /* 稍微加粗，无需花哨颜色 */
+}
+
+.folder-icon { 
+    display: inline-block; width: 14px; margin-right: 6px; 
+    font-size: 10px; color: #86868b; 
+    transition: transform 0.2s; text-align: center; 
+}
+.tree-item.active .folder-icon { color: rgba(255,255,255,0.8); }
+.folder-open > .tree-item > .folder-icon { transform: rotate(90deg); }
+.folder-open > ul { display: block; }
+
+/* 隐藏生硬的滚动条，鼠标悬浮时才显示细条 */
+.sidebar::-webkit-scrollbar { width: 0px; background: transparent; }
+.sidebar:hover::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+
+/* ================== Responsive Logic ================== */
+/* PC Desktop: 默认展开 */
+@media (min-width: 769px) {
+    .sidebar.collapsed {
+        width: 0;
+        border-right: none;
+        overflow: hidden;
+    }
+}
+
+/* Mobile: 默认隐藏并在左侧固定 */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        height: 100vh;
+        left: 0;
+        top: 0;
+        width: 280px;
+        transform: translateX(-100%);
+        box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .toggle-btn { bottom: 20px; left: 20px; }
+}
+
+/* ================== Main Content (Telegraph Style) ================== */
+.main-content {
+    flex: 1;
+    overflow-y: auto;
+    background: #fff;
+    scroll-behavior: smooth;
+}
+
+.tl-article { 
+    width: 100%; /* 核心修复：强制撑满宽度，防止在 Flex 容器下因绝对定位导致宽度塌陷 */
+    max-width: 600px; 
+    margin: 0 auto; 
+    padding: 60px 20px 100px 20px; 
+}
+.tl-content { font-family: Georgia, serif; }
+
+figure { margin: 0 0 32px 0; padding: 0; display: block; }
+/* figure img, figure video{width:100%;height:auto;display:block;border:0;background-color:#f4f5f6;border-radius:4px;} */
+figure img, figure video, figure audio { width:100%; height:auto; display:block; border:0; background-color:#f4f5f6; border-radius:4px; }
+
+figure img{cursor:pointer;}
+
+h1 {
+    font-family: Georgia, serif; font-size: 32px; font-weight: 700;
+    line-height: 1.15; color: #000000; margin: 0 0 12px 0; letter-spacing: -0.01em;
+}
+
+.tl-meta { font-size: 15px; color: #79828b; margin: 0; }
+.tl-meta .author { color: #212121d6; text-decoration: none; }
+.tl-meta .divider { padding: 0 4px; color: #b0b7bd; }
+
+
+
+/* ================== 修改：瀑布流多列布局 ================== */
+/* 旧的 column-count 已废弃，现采用 Masonry + Tailwind Grid 渲染 */
+.waterfall-mode.tl-content {
+    /* 移除原有列宽属性 */
+}
+.waterfall-mode figure {
+    break-inside: avoid;
+    margin-bottom: 15px; /* 微调间距 */
+}
+
+/* 瀑布流响应式降级由 Tailwind 网格类名接管 */
+
+/* ================== 修改：悬浮动效（仅在瀑布流触发） ================== */
+/* .waterfall-mode .media-item:hover figure img, 
+.waterfall-mode .media-item:hover figure video {
+    transform: scale(1.015);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    z-index: 10;
+    position: relative;
+} */
+.waterfall-mode .media-item:hover figure img, 
+.waterfall-mode .media-item:hover figure video {
+    transform: scale(1.015);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    z-index: 10;
+    position: relative;
+}
+
+/* ... */
+
+/* ================== 新增：灯箱 (Lightbox) 样式 ================== */
+.lightbox-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); /* macOS 毛玻璃质感 */
+    z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.35s ease;
+}
+
+.lightbox-overlay.show { opacity: 1; pointer-events: auto; }
+
+.lightbox-img {
+    max-width: 92%; max-height: 92%;
+    border-radius: 8px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    transform: scale(0.95);
+    transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.lightbox-overlay.show .lightbox-img { transform: scale(1); }
+
+.lightbox-close {
+    position: absolute; top: 25px; right: 25px;
+    width: 44px; height: 44px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 50%; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.2s, transform 0.2s;
+}
+
+.lightbox-close:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
+
+.tl-article.waterfall-container {
+    max-width: 1080px;
+}
+.tl-content.waterfall-mode .media-caption {
+    display: none;
+}
+/* img.shadow-md.rounded-sm.blur-loaded {
+    border-radius: 15px;
+} */
+
+tl-content{max-width: 660px;}
+/* ================== 修改：悬浮动效（仅在瀑布流触发） ================== */
+/* 仅在瀑布流模式下，鼠标指向图片才会触发轻微放大与阴影 */
+/* .waterfall-mode figure img:hover, 
+.waterfall-mode figure video:hover {
+    transform: scale(1.015);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    z-index: 10;
+    position: relative;
+} */
+.waterfall-mode figure img:hover, 
+.waterfall-mode figure video:hover {
+    transform: scale(1.015);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    z-index: 10;
+    position: relative;
+}
+/* ================== 修改与新增：灯箱及双击放大样式 ================== */
+.lightbox-img {
+    max-width: 92%; max-height: 92%;
+    border-radius: 8px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    transform: scale(0.95);
+    /* 增加 transform 动画，使双击放大与切换过渡更平滑 */
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    cursor: zoom-in;
+    user-select: none; /* 防止双击时文字被选中 */
+}
+
+/* 灯箱双击放大状态 */
+.lightbox-img.zoomed {
+    transform: scale(1.6); 
+    cursor: zoom-out;
+}
+
+/* 灯箱左右切换按钮样式 */
+.lightbox-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 56px;
+    height: 56px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s, opacity 0.2s;
+    z-index: 2100;
+}
+.lightbox-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-50%) scale(1.05);
+}
+.lightbox-btn:active {
+    transform: translateY(-50%) scale(0.95);
+}
+.lightbox-btn.prev { left: 40px; }
+.lightbox-btn.next { right: 40px; }
+
+/* 移动端轻量隐藏导航键，靠手势或点击两侧 */
+@media (max-width: 768px) {
+    .lightbox-btn { width: 44px; height: 44px; }
+    .lightbox-btn.prev { left: 15px; }
+    .lightbox-btn.next { right: 15px; }
+}
+/* ================== 修改：侧栏头部与原生 macOS UI 美化 ================== */
+
+/* 移除原本生硬的内边距，交由内部元素控制 */
+
+
+/* 新增：品牌 Logo 与标题区域 */
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    padding: 24px 16px 16px 20px;
+    gap: 12px;
+}
+
+.brand-icon {
+    width: 30px;
+    height: 30px;
+    /* macOS 经典的亮蓝色渐变 */
+    background: linear-gradient(135deg, #0A84FF, #005EBB);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(10, 132, 255, 0.3);
+}
+
+.brand-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1d1d1f;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+    letter-spacing: -0.2px;
+}
+
+/* 新增：动作按钮组容器 */
+.sidebar-actions {
+    padding: 0 12px 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px; /* macOS 侧栏列表项之间非常紧凑 */
+}
+
+/* 重新设计 .btn-update：去除边框，改为左对齐的沉浸式列表项 */
+.btn-update {
+    display: flex; 
+    align-items: center; 
+    justify-content: flex-start; /* 靠左对齐，与下方目录树对齐 */
+    gap: 10px;
+    width: 100%; 
+    padding: 8px 10px;
+    background: transparent; 
+    color: #1d1d1f;
+    border: none; /* 去除全部边框 */
+    border-radius: 6px;
+    cursor: pointer; 
+    font-size: 13px; 
+    font-weight: 500;
+    transition: background 0.15s ease;
+    box-shadow: none; /* 去除阴影 */
+}
+
+/* 按钮图标统一使用 Mac 蓝，增强视觉引导 */
+.btn-update svg {
+    color: #0A84FF; 
+    flex-shrink: 0;
+}
+
+.btn-update:hover { 
+    background: rgba(0, 0, 0, 0.06); /* 经典的浅灰背景悬浮反馈 */
+}
+
+.btn-update:active {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.btn-update input { display: none; }
+
+/* 新增：侧栏分组小标题（类似 macOS 中"个人收藏"、"标签"） */
+.sidebar-section-title {
+    padding: 12px 16px 4px 20px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #86868b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ================== 修改：彻底统一侧栏排版体系 (完美对齐版) ================== */
+
+/* 1. 品牌区调整：视觉上更紧凑，缩小不协调的突兀感 */
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    padding: 20px 12px 12px 22px; 
+    gap: 10px;
+}
+
+.brand-icon {
+    width: 26px; height: 26px;
+    background: linear-gradient(135deg, #0A84FF, #005EBB);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(10, 132, 255, 0.2);
+}
+.brand-icon svg { width: 14px; height: 14px; }
+
+.brand-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d1d1f8a;
+    letter-spacing: -0.1px;
+}
+
+/* 2. 移除外层容器多余的 padding */
+.sidebar-actions {
+    padding: 3px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* 3. ★ 核心修复：强制统一“功能按钮”与“相册树节点”的宽高、间距与排版 ★ */
+.btn-update, .tree-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;           /* 统一图标与文字的间距 */
+    /* margin: 0 12px; */     /* 统一外边距，确保悬浮灰色背景块左中右宽度完美一致 */
+    padding: 6px 10px;  /* 统一内边距 */
+    /* width: auto; */        /* 覆盖之前的 100% */
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #1d1d1f;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.1s ease;
+    /* box-shadow: none; */
+    /* text-decoration: none; */
+    /* line-height: 1.2; */
+}
+
+/* 统一悬浮背景色 */
+.btn-update:hover, .tree-item:hover { 
+    background: rgba(0, 0, 0, 0.05); 
+}
+
+/* 让功能按钮的 svg 占位与下方相册的三角形占位完全相同 */
+.btn-update svg {
+    width: 16px; height: 16px;
+    color: #0A84FF; 
+    flex-shrink: 0;
+    stroke-width: 2px;
+}
+
+/* 修正下方树形菜单的图标，使其居中且宽度固定为 16px，从而保证文字完美对齐 */
+.folder-icon { 
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    width: 16px;         /* 与上方的 svg 宽度保持完全一致 */
+    height: 16px;
+    margin-right: 0;     /* 移除旧的 margin，由 flex gap 统一控制图文间距 */
+    font-size: 10px; 
+    color: #86868b; 
+    /* transition: transform 0.2s;  */
+}
+
+/* 4. 小标题对齐修正 */
+.sidebar-section-title {
+    padding: 16px 0 6px 0;
+    /* margin 22px 是因为：高亮块 margin 12px + 内部 padding 10px = 文字起步位置 22px */
+    margin: 0 22px; 
+    font-size: 11px;
+    font-weight: 600;
+    color: #86868b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+
+/* 确保 sidebar 容器有高度并且使用 Flexbox 布局 */
+.sidebar {
+    /* 你的其他 sidebar 样式 */
+    
+    /* background-color: #333; 示例背景色 */
+    color: white; /* 示例文字颜色 */
+    padding: 1px;
+    height: 100vh; /* 设置高度为视口高度，确保它填满屏幕 */
+    
+    /* 关键：使用 Flexbox 实现垂直布局 */
+    display: flex;
+    flex-direction: column;
+}
+
+/* 让主要内容区域占据剩余空间，将 footer 推到底部 */
+.sidebar-main-content {
+    flex: 1; /* 这个属性是关键 */
+    /* 其他主要内容样式 */
+    overflow-y: auto; /* 如果主要内容过长，允许内部滚动 */
+}
+
+/* 样式化底部区域 */
+.sidebar-footer {
+    border-top: 1.2px solid #55555545; /* 可选：添加顶部边框 */
+    margin-top: auto; /* 关键：确保它被“推”到底部 */
+    padding:15px 15px 25px 15px;
+    text-align: center; /* 内容居中 */
+    font-size: 0.9em; /* 减小字体 */
+    color: #838383; /* 调整字体颜色 */
+}
+
+/* 样式化底部的段落 */
+.sidebar-footer p {
+    margin: 5px 0;    font-size: 12px;
+}
+
+/* 样式化 GitHub 链接 */
+.sidebar-footer .github-link a {
+    color: #838383; /* 链接颜色 */
+    text-decoration: underline; /* 添加下划线 */
+    display: inline-block;
+    padding: 5px;
+}
+
+.sidebar-footer .github-link a:hover {
+    color: #0b84ff; /* 悬停时颜色 */
+}
+
+.sidebar-footer .copyright a {
+    color: #838383; /* 链接颜色 */
+    text-decoration: underline; /* 添加下划线 */
+    display: inline-block;
+    padding: 5px;
+}
+
+.sidebar-footer .copyright a:hover {
+    color: #0b84ff; /* 悬停时颜色 */
+}
+
+
+
+/* 如果你使用了图标，可以调整图标和文字的间距 */
+.sidebar-footer .github-link a i {
+    margin-right: 5px;
+}
+aside#sidebar:hover {
+    width: 256px;
+    transition: none !important;
+}
+/* ================== 新增：文件名称与懒加载占位样式 ================== */
+/* 正文媒体文件下方的文件名（带后缀） */
+.media-caption {
+    text-align: center;
+    font-size: 13px;
+    color: #86868b;
+    margin-top: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", ui-monospace, monospace;
+    word-break: break-all;
+        /* padding: 1px 10px 20px 10px; */
+}
+/* 2. 核心修改：仅在没有 .waterfall-mode 类（即大图预览模式）时，应用此内边距 */
+.tl-content:not(.waterfall-mode) .media-caption {
+    padding: 1px 10px 20px 10px;
+}
+
+/* ================== 新增：Telegraph 风格骨架屏动画 ================== */
+@keyframes telegraphShimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* 懒加载占位图：Telegraph 动态骨架屏风格 */
+.lazy-image {
+    min-height: 200px;
+    /* 使用 Telegraph 经典的浅灰背景，叠加柔和的亮色渐变带 */
+    background: linear-gradient(90deg, #f4f5f6 25%, #e8eaed 50%, #f4f5f6 75%);
+    background-size: 200% 100%;
+    /* 1.5秒匀速无限循环光泽动画 */
+    animation: telegraphShimmer 1.5s infinite linear;
+    border-radius: 4px; /* 保持与原有 figure img 统一的圆角 */
+}
+
+/* ================== 新增：Telegram 风格加载动效 ================== */
+/* 媒体独立容器，用于将加载圈绝对定位在中央 */
+.media-wrapper {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 10px;
+    background: #f4f5f6; /* 加载时的骨架底色 */
+}
+
+/* 模糊等待状态：高斯模糊 + 透明度降低 */
+.blur-load {
+    filter: blur(12px);
+    opacity: 0.5;
+    transition: filter 0.5s ease-out, opacity 0.5s ease-out;
+}
+
+/* 加载完成状态：瞬间清晰 */
+.blur-loaded {
+    filter: blur(0);
+    opacity: 1;
+}
+
+/* Telegram 风格圆形加载浮层 */
+.tg-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 0, 0, 0.45); /* 半透明黑底 */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10; /* 保证在最顶层显示 */
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* 旋转的白色进度圆弧 */
+.tg-spinner::after {
+    content: "";
+    width: 22px;
+    height: 22px;
+    border: 2.5px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #ffffff;
+    border-right-color: #ffffff;
+    border-radius: 50%;
+    animation: tg-spin 0.7s linear infinite;
+}
+
+@keyframes tg-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.aplayer .aplayer-list ol li .aplayer-list-cur {
+    display: none;
+    width: 3px;
+    height: 30px;
+    position: absolute;
+    left: 0;
+    top: 0px;
+    cursor: pointer;
+    background-color: #0b84ff;
+}
+.aplayer .aplayer-list ol li .aplayer-list-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #333333e6;
+}
